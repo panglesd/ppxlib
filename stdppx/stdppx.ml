@@ -268,6 +268,15 @@ module Option = struct
   let iter t ~f = match t with None -> () | Some x -> f x
   let map t ~f = match t with None -> None | Some x -> Some (f x)
   let value t ~default = match t with None -> default | Some x -> x
+  let to_list t = match t with None -> [] | Some x -> [ x ]
+end
+
+module Result = struct
+  let bind t ~f = match t with Ok a -> f a | Error e -> Error e
+  let map t ~f = match t with Ok a -> Ok (f a) | Error e -> Error e
+  let ( let+ ) t f = bind t ~f
+  let ( let* ) t f = map t ~f
+  let handle_error t ~f = match t with Ok a -> a | Error e -> f e
 end
 
 module Out_channel = struct

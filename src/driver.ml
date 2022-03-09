@@ -611,19 +611,25 @@ let map_structure_gen st ~tool_name ~hook ~expect_mismatch_handler ~input_name
   in
   let cookies_and_check st =
     Cookies.call_post_handlers T;
-    if !perform_checks then (
-      (* TODO: these two passes could be merged, we now have more passes for
-         checks than for actual rewriting. *)
-      Attribute.check_unused#structure st;
-      if !perform_checks_on_extensions then Extension.check_unused#structure st;
-      Attribute.check_all_seen ();
-      if !perform_locations_check then
-        let open Location_check in
-        ignore
-          ((enforce_invariants !loc_fname)#structure st
-             Non_intersecting_ranges.empty
-            : Non_intersecting_ranges.t));
-    st
+    let errors =
+      if !perform_checks then (
+        (* TODO: these two passes could be merged, we now have more passes for
+           checks than for actual rewriting. *)
+        Attribute.check_unused#structure st;
+        if !perform_checks_on_extensions then
+          Extension.check_unused#structure st;
+        let not_seen_errors = Attribute.check_all_seen () in
+        (if !perform_locations_check then
+         let open Location_check in
+         ignore
+           ((enforce_invariants !loc_fname)#structure st
+              Non_intersecting_ranges.empty
+             : Non_intersecting_ranges.t));
+        List.map not_seen_errors ~f:(fun e ->
+            Ast_builder.Default.pstr_extension ~loc:Location.none e []))
+      else []
+    in
+    errors @ st
   in
   let file_path = File_path.get_default_path_str st in
   match
@@ -670,19 +676,25 @@ let map_signature_gen sg ~tool_name ~hook ~expect_mismatch_handler ~input_name
   in
   let cookies_and_check sg =
     Cookies.call_post_handlers T;
-    if !perform_checks then (
-      (* TODO: these two passes could be merged, we now have more passes for
-         checks than for actual rewriting. *)
-      Attribute.check_unused#signature sg;
-      if !perform_checks_on_extensions then Extension.check_unused#signature sg;
-      Attribute.check_all_seen ();
-      if !perform_locations_check then
-        let open Location_check in
-        ignore
-          ((enforce_invariants !loc_fname)#signature sg
-             Non_intersecting_ranges.empty
-            : Non_intersecting_ranges.t));
-    sg
+    let errors =
+      if !perform_checks then (
+        (* TODO: these two passes could be merged, we now have more passes for
+           checks than for actual rewriting. *)
+        Attribute.check_unused#signature sg;
+        if !perform_checks_on_extensions then
+          Extension.check_unused#signature sg;
+        let not_seen_errors = Attribute.check_all_seen () in
+        (if !perform_locations_check then
+         let open Location_check in
+         ignore
+           ((enforce_invariants !loc_fname)#signature sg
+              Non_intersecting_ranges.empty
+             : Non_intersecting_ranges.t));
+        List.map not_seen_errors ~f:(fun e ->
+            Ast_builder.Default.psig_extension ~loc:Location.none e []))
+      else []
+    in
+    errors @ sg
   in
   let file_path = File_path.get_default_path_sig sg in
   match

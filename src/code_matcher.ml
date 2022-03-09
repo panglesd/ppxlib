@@ -43,12 +43,15 @@ struct
           let loc =
             { Location.loc_start = pos; loc_end = pos; loc_ghost = false }
           in
-          Location.raise_errorf ~loc "ppxlib: [@@@@@@%s] attribute missing"
-            (Attribute.Floating.name M.end_marker)
+          Error
+            (Location.error_extensionf ~loc
+               "ppxlib: [@@@@@@%s] attribute missing"
+               (Attribute.Floating.name M.end_marker))
       | x :: l -> (
           match Attribute.Floating.convert [ M.end_marker ] x with
-          | None -> loop (x :: acc) l
-          | Some () -> (List.rev acc, (M.get_loc x).loc_start)
+          | Ok None -> loop (x :: acc) l
+          | Ok (Some ()) -> Ok (List.rev acc, (M.get_loc x).loc_start)
+          | Error e -> Error e
           | exception Failure _ -> loop (x :: acc) l)
     in
     loop [] l
@@ -138,7 +141,8 @@ struct
         match_loop ~end_pos ~mismatch_handler ~expected ~source
 
   let do_match ~pos ~expected ~mismatch_handler source =
-    let source, end_pos = extract_prefix ~pos source in
+    let open Result in
+    let* source, end_pos = extract_prefix ~pos source in
     match_loop ~end_pos ~mismatch_handler ~expected ~source
 end
 

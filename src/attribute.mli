@@ -131,15 +131,18 @@ val name : _ t -> string
 val context : ('a, _) t -> 'a Context.t
 
 val get :
-  ('a, 'b) t -> ?mark_as_seen:bool (** default [true] *) -> 'a -> 'b option
+  ('a, 'b) t ->
+  ?mark_as_seen:bool (** default [true] *) ->
+  'a ->
+  ('b option, extension) result
 (** Gets the associated attribute value. Marks the attribute as seen unless
-    [mark_as_seen=false]. *)
+    [mark_as_seen=false]. Returns an [Error] if the attribute has is duplicated*)
 
-val consume : ('a, 'b) t -> 'a -> ('a * 'b) option
+val consume : ('a, 'b) t -> 'a -> (('a * 'b) option, extension) result
 (** [consume t x] returns the value associated to attribute [t] on [x] if
     present as well as [x] with [t] removed. *)
 
-val remove_seen : 'a Context.t -> packed list -> 'a -> 'a
+val remove_seen : 'a Context.t -> packed list -> 'a -> ('a, extension) result
 (** [remove_seen x attrs] removes the set of attributes matched by elements of
     [attrs]. Only remove them if they where seen by {!get} or {!consume}. *)
 
@@ -167,7 +170,7 @@ module Floating : sig
     ('a, 'c) t
 
   val name : _ t -> string
-  val convert : ('a, 'b) t list -> 'a -> 'b option
+  val convert : ('a, 'b) t list -> 'a -> ('b option, extension) result
 end
 
 val explicitly_drop : Ast_traverse.iter
@@ -181,7 +184,7 @@ val collect : Ast_traverse.iter
 (** Collect all attribute names. To be used in conjunction with
     {!check_all_seen}. *)
 
-val check_all_seen : unit -> unit
+val check_all_seen : unit -> extension list
 (** Check that all attributes collected by {!freshen_and_collect} have been:
 
     - matched at least once by one of: {!get}, {!consume} or {!Floating.convert}
@@ -204,4 +207,4 @@ val reset_checks : unit -> unit
 val pattern :
   ('a, 'b) t ->
   ('a, 'c, 'd) Ast_pattern.t ->
-  ('a, 'b option -> 'c, 'd) Ast_pattern.t
+  ('a, 'b option -> 'c, ('d, Import.extension) result) Ast_pattern0.t

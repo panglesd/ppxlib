@@ -7,7 +7,7 @@ val match_structure :
   expected:structure ->
   mismatch_handler:(Location.t -> structure -> unit) ->
   structure ->
-  unit
+  (unit, extension) result
 (** Checks that the given code starts with [expected] followed by
     [@@@deriving.end] or [@@@end].
 
@@ -21,5 +21,5 @@ val match_signature :
   expected:signature ->
   mismatch_handler:(Location.t -> signature -> unit) ->
   signature ->
-  unit
+  (unit, extension) result
 (** Same for signatures *)

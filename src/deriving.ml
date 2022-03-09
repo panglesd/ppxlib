@@ -170,33 +170,52 @@ module Generator = struct
     loop String.Set.empty l
 
   let check_arguments name generators (args : (string * expression) list) =
-    List.iter args ~f:(fun (label, e) ->
-        if String.is_empty label then
-          Location.raise_errorf ~loc:e.pexp_loc
-            "Ppxlib.Deriving: generator arguments must be labelled");
-    Option.iter
-      (List.find_a_dup args ~compare:(fun (a, _) (b, _) -> String.compare a b))
-      ~f:(fun (label, e) ->
-        Location.raise_errorf ~loc:e.pexp_loc
-          "Ppxlib.Deriving: argument labelled '%s' appears more than once" label);
+    let open Result in
+    let empty_label_error =
+      List.filter_map args ~f:(fun (label, e) ->
+          if String.is_empty label then
+            Some
+              (Location.error_extensionf ~loc:e.pexp_loc
+                 "Ppxlib.Deriving: generator arguments must be labelled")
+          else None)
+    in
+    let duplicate_argument_error =
+      Option.map
+        (List.find_a_dup args ~compare:(fun (a, _) (b, _) -> String.compare a b))
+        ~f:(fun (label, e) ->
+          Location.error_extensionf ~loc:e.pexp_loc
+            "Ppxlib.Deriving: argument labelled '%s' appears more than once"
+            label)
+      |> Option.to_list
+    in
     let accepted_args = merge_accepted_args generators in
-    List.iter args ~f:(fun (label, e) ->
-        if not (String.Set.mem label accepted_args) then
-          let spellcheck_msg =
-            match
-              Spellcheck.spellcheck (String.Set.elements accepted_args) label
-            with
-            | None -> ""
-            | Some s -> ".\n" ^ s
-          in
-          Location.raise_errorf ~loc:e.pexp_loc
-            "Ppxlib.Deriving: generator '%s' doesn't accept argument '%s'%s"
-            name label spellcheck_msg)
+    let unaccepted_argument =
+      List.filter_map args ~f:(fun (label, e) ->
+          if not (String.Set.mem label accepted_args) then
+            let spellcheck_msg =
+              match
+                Spellcheck.spellcheck (String.Set.elements accepted_args) label
+              with
+              | None -> ""
+              | Some s -> ".\n" ^ s
+            in
+            Some
+              (Location.error_extensionf ~loc:e.pexp_loc
+                 "Ppxlib.Deriving: generator '%s' doesn't accept argument \
+                  '%s'%s"
+                 name label spellcheck_msg)
+          else None)
+    in
+    let errors =
+      empty_label_error @ duplicate_argument_error @ unaccepted_argument
+    in
+    if List.length errors = 0 then Ok () else Error errors
 
   let apply (T t) ~name:_ ~ctxt x args = Args.apply t.spec args (t.gen ~ctxt x)
 
   let apply_all ~ctxt entry (name, generators, args) =
-    check_arguments name.txt generators args;
+    let open Result in
+    let* errors = check_arguments name.txt generators args in
     List.concat_map generators ~f:(fun t ->
         apply t ~name:name.txt ~ctxt entry args)
 

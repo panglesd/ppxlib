@@ -308,7 +308,7 @@ let explicitly_drop =
 let get_internal =
   let rec find_best_match t attributes longest_match =
     match attributes with
-    | [] -> longest_match
+    | [] -> Ok longest_match
     | ({ attr_name = name; _ } as attr) :: rest ->
         if Name.Pattern.matches t.name name.txt then
           match longest_match with
@@ -318,7 +318,10 @@ let get_internal =
               let len' = String.length name'.txt in
               if len > len' then find_best_match t rest (Some attr)
               else if len < len' then find_best_match t rest longest_match
-              else Location.raise_errorf ~loc:name.loc "Duplicated attribute"
+              else
+                Error
+                  (Location.error_extensionf ~loc:name.loc
+                     "Duplicated attribute")
         else find_best_match t rest longest_match
   in
   fun t attributes -> find_best_match t attributes None
@@ -332,14 +335,18 @@ let convert ?(do_mark_as_seen = true) pattern attr =
     (k ~name_loc:attr.attr_name.loc)
 
 let get t ?mark_as_seen:do_mark_as_seen x =
+  let open Result in
   let attrs = Context.get_attributes t.context x in
-  match get_internal t attrs with
+  let* res = get_internal t attrs in
+  match res with
   | None -> None
   | Some attr -> Some (convert t.payload attr ?do_mark_as_seen)
 
 let consume t x =
+  let open Result in
   let attrs = Context.get_attributes t.context x in
-  match get_internal t attrs with
+  let* res = get_internal t attrs in
+  match res with
   | None -> None
   | Some attr ->
       let attrs = List.filter attrs ~f:(fun attr' -> not (attr == attr')) in
@@ -347,13 +354,15 @@ let consume t x =
       Some (x, convert t.payload attr)
 
 let remove_seen (type a) (context : a Context.t) packeds (x : a) =
+  let open Result in
   let attrs = Context.get_attributes context x in
   let matched =
     let rec loop acc = function
-      | [] -> acc
+      | [] -> Ok acc
       | T t :: rest ->
           if Context.equal t.context context then
-            match get_internal t attrs with
+            let+ res = get_internal t attrs in
+            match res with
             | None -> loop acc rest
             | Some attr ->
                 let name = attr.attr_name in
@@ -363,15 +372,18 @@ let remove_seen (type a) (context : a Context.t) packeds (x : a) =
     in
     loop [] packeds
   in
+  let* matched = matched in
   let attrs =
     List.filter attrs ~f:(fun attr' -> not (List.memq ~set:matched attr'))
   in
   Context.set_attributes context x attrs
 
 let pattern t p =
+  let open Result in
   let f = Ast_pattern.to_func p in
   Ast_pattern.of_func (fun ctx loc x k ->
-      match consume t x with
+      let* res = consume t x in
+      match res with
       | None -> f ctx loc x (k None)
       | Some (x, v) -> f ctx loc x (k (Some v)))
 
@@ -396,7 +408,7 @@ module Floating = struct
 
   let convert ts x =
     match ts with
-    | [] -> None
+    | [] -> Ok None
     | { context; _ } :: _ -> (
         assert (List.for_all ts ~f:(fun t -> Context.equal t.context context));
         let attr = Context.get_attribute context x in
@@ -404,13 +416,14 @@ module Floating = struct
         match
           List.filter ts ~f:(fun t -> Name.Pattern.matches t.name name.txt)
         with
-        | [] -> None
-        | [ t ] -> Some (convert t.payload attr)
+        | [] -> Ok None
+        | [ t ] -> Ok (Some (convert t.payload attr))
         | l ->
-            Location.raise_errorf ~loc:name.loc
-              "Multiple match for floating attributes: %s"
-              (String.concat ~sep:", "
-                 (List.map l ~f:(fun t -> Name.Pattern.name t.name))))
+            Error
+              (Location.error_extensionf ~loc:name.loc
+                 "Multiple match for floating attributes: %s"
+                 (String.concat ~sep:", "
+                    (List.map l ~f:(fun t -> Name.Pattern.name t.name)))))
 end
 
 let check_attribute registrar context name =
@@ -577,12 +590,14 @@ let collect =
   end
 
 let check_all_seen () =
-  let fail name loc =
+  let fail name loc acc =
     let txt = name.txt in
     if not (Name.ignore_checks txt) then
-      Location.raise_errorf ~loc "Attribute `%s' was silently dropped" txt
+      Location.error_extensionf ~loc "Attribute `%s' was silently dropped" txt
+      :: acc
+    else acc
   in
-  Attribute_table.iter fail not_seen
+  Attribute_table.fold fail not_seen []
 
 let remove_attributes_present_in table =
   object
