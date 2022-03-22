@@ -31,7 +31,11 @@ module Context : sig
   val structure_item : structure_item t
   val eq : 'a t -> 'b t -> ('a, 'b) equality
   val get_extension : 'a t -> 'a -> (extension * attributes) option
+  val ext_item_from_context : 'a t -> extension -> 'a
   val merge_attributes : 'a t -> 'a -> attributes -> 'a
+
+  val merge_attributes_res :
+    'a t -> 'a -> attributes -> ('a, extension list) result
 end
 
 type t
@@ -96,13 +100,16 @@ module For_context : sig
   type 'a t
 
   val convert :
-    'a t list -> ctxt:Expansion_context.Extension.t -> extension -> 'a option
+    'a t list ->
+    ctxt:Expansion_context.Extension.t ->
+    extension ->
+    ('a option, extension) result
 
   val convert_inline :
     'a t list ->
     ctxt:Expansion_context.Extension.t ->
     extension ->
-    'a list option
+    ('a list option, extension) result
 end
 
 val filter_by_context : 'a Context.t -> t list -> 'a For_context.t list
@@ -134,10 +141,15 @@ module Expert : sig
     (arg:Longident.t Loc.t option -> 'a) ->
     ('context, 'b) t
 
-  val convert : (_, 'a) t list -> loc:Location.t -> extension -> 'a option
+  val convert :
+    (_, 'a) t list ->
+    loc:Location.t ->
+    extension ->
+    ('a option, extension) result
 end
 
 val check_unused : Ast_traverse.iter
+val check_unused_fold : extension list Ast_traverse.fold
 
 module V2 : sig
   type nonrec t = t

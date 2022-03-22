@@ -201,15 +201,18 @@ let rec map_node_rec context ts super_call loc base_ctxt x =
     Expansion_context.Extension.make ~extension_point_loc:loc ~base:base_ctxt ()
   in
   match EC.get_extension context x with
-  | None -> super_call base_ctxt x
+  | None -> Ok (super_call base_ctxt x)
   | Some (ext, attrs) -> (
       match E.For_context.convert ts ~ctxt ext with
-      | None -> super_call base_ctxt x
-      | Some x ->
-          map_node_rec context ts super_call loc base_ctxt
-            (EC.merge_attributes context x attrs))
+      | Ok None -> Ok (super_call base_ctxt x)
+      | Ok (Some x) -> (
+          match EC.merge_attributes_res context x attrs with
+          | Ok x -> map_node_rec context ts super_call loc base_ctxt x
+          | Error l -> Error (List.map ~f:(EC.ext_item_from_context context) l))
+      | Error err -> Error [ EC.ext_item_from_context context err ])
 
 let map_node context ts super_call loc base_ctxt x ~hook =
+  let open Result in
   let ctxt =
     Expansion_context.Extension.make ~extension_point_loc:loc ~base:base_ctxt ()
   in
@@ -217,14 +220,15 @@ let map_node context ts super_call loc base_ctxt x ~hook =
   | None -> super_call base_ctxt x
   | Some (ext, attrs) -> (
       match E.For_context.convert ts ~ctxt ext with
-      | None -> super_call base_ctxt x
-      | Some x ->
-          let generated_code =
+      | Ok None -> Ok (super_call base_ctxt x)
+      | Ok (Some x) ->
+          let* generated_code =
             map_node_rec context ts super_call loc base_ctxt
               (EC.merge_attributes context x attrs)
           in
           Generated_code_hook.replace hook context loc (Single generated_code);
-          generated_code)
+          generated_code
+      | Error err -> EC.ext_item_from_context context err)
 
 let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
     ~in_generated_code =
@@ -248,25 +252,31 @@ let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
               ~base:base_ctxt ()
           in
           match E.For_context.convert_inline ts ~ctxt ext with
-          | None ->
+          | Ok None ->
               let x = super_call base_ctxt x in
               let l =
                 map_nodes context ts super_call get_loc base_ctxt l ~hook
                   ~in_generated_code
               in
               x :: l
-          | Some x ->
-              assert_no_attributes attrs;
-              let generated_code =
-                map_nodes context ts super_call get_loc base_ctxt x ~hook
-                  ~in_generated_code:true
-              in
-              if not in_generated_code then
-                Generated_code_hook.replace hook context extension_point_loc
-                  (Many generated_code);
-              generated_code
-              @ map_nodes context ts super_call get_loc base_ctxt l ~hook
-                  ~in_generated_code))
+          | Ok (Some x) ->
+              let no_attributes_errors = assert_no_attributes_fold attrs in
+              if List.length no_attributes_errors = 0 then (
+                let generated_code =
+                  map_nodes context ts super_call get_loc base_ctxt x ~hook
+                    ~in_generated_code:true
+                in
+                if not in_generated_code then
+                  Generated_code_hook.replace hook context extension_point_loc
+                    (Many generated_code);
+                generated_code
+                @ map_nodes context ts super_call get_loc base_ctxt l ~hook
+                    ~in_generated_code)
+              else
+                List.map
+                  ~f:(EC.ext_item_from_context context)
+                  no_attributes_errors
+          | Error err -> [ EC.ext_item_from_context context err ]))
 
 let map_nodes = map_nodes ~in_generated_code:false
 
@@ -614,17 +624,27 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                     ~base:base_ctxt ()
                 in
                 match E.For_context.convert_inline structure_item ~ctxt ext with
-                | None ->
+                | Ok None ->
                     let item = super#structure_item base_ctxt item in
                     let rest = self#structure base_ctxt rest in
                     item :: rest
-                | Some items ->
-                    assert_no_attributes attrs;
-                    let items = loop items ~in_generated_code:true in
-                    if not in_generated_code then
-                      Generated_code_hook.replace hook Structure_item
-                        item.pstr_loc (Many items);
-                    items @ loop rest ~in_generated_code)
+                | Ok (Some items) ->
+                    let no_attributes_errors =
+                      assert_no_attributes_fold attrs
+                    in
+                    if List.length no_attributes_errors = 0 then (
+                      (* assert_no_attributes attrs; *)
+                      let items = loop items ~in_generated_code:true in
+                      if not in_generated_code then
+                        Generated_code_hook.replace hook Structure_item
+                          item.pstr_loc (Many items);
+                      items @ loop rest ~in_generated_code)
+                    else
+                      List.map
+                        ~f:(EC.ext_item_from_context EC.Structure_item)
+                        no_attributes_errors
+                | Error err ->
+                    [ EC.ext_item_from_context EC.Structure_item err ])
             | _ -> (
                 let error_of_extension e =
                   [ Ast_builder.Default.pstr_extension ~loc:Location.none e [] ]
@@ -734,17 +754,26 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                     ~base:base_ctxt ()
                 in
                 match E.For_context.convert_inline signature_item ~ctxt ext with
-                | None ->
+                | Ok None ->
                     let item = super#signature_item base_ctxt item in
                     let rest = self#signature base_ctxt rest in
                     item :: rest
-                | Some items ->
-                    assert_no_attributes attrs;
-                    let items = loop items ~in_generated_code:true in
-                    if not in_generated_code then
-                      Generated_code_hook.replace hook Signature_item
-                        item.psig_loc (Many items);
-                    items @ loop rest ~in_generated_code)
+                | Ok (Some items) ->
+                    let no_attributes_errors =
+                      assert_no_attributes_fold attrs
+                    in
+                    if List.length no_attributes_errors = 0 then (
+                      let items = loop items ~in_generated_code:true in
+                      if not in_generated_code then
+                        Generated_code_hook.replace hook Signature_item
+                          item.psig_loc (Many items);
+                      items @ loop rest ~in_generated_code)
+                    else
+                      List.map
+                        ~f:(EC.ext_item_from_context EC.Signature_item)
+                        no_attributes_errors
+                | Error err ->
+                    [ EC.ext_item_from_context EC.Signature_item err ])
             | _ -> (
                 let error_of_extension e =
                   [ Ast_builder.Default.psig_extension ~loc:Location.none e [] ]

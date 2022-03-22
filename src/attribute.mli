@@ -180,6 +180,9 @@ val explicitly_drop : Ast_traverse.iter
 val check_unused : Ast_traverse.iter
 (** Raise if there are unused attributes *)
 
+val check_unused_fold : extension list Ast_traverse.fold
+(** Collect all errors due to unused attributes *)
+
 val collect : Ast_traverse.iter
 (** Collect all attribute names. To be used in conjunction with
     {!check_all_seen}. *)

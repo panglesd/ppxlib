@@ -61,6 +61,14 @@ module Registrar : sig
     (string -> 'a, unit, string, 'c) format4 ->
     string Loc.t ->
     'a
+
+  val error_extensionf :
+    'context t ->
+    'context ->
+    ?white_list:string list ->
+    (string -> extension, unit, string, extension) format4 ->
+    string Loc.t ->
+    extension
 end
 
 module Whitelisted : sig

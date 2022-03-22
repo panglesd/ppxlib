@@ -80,12 +80,22 @@ val parse :
   ('a, 'b, 'c) t -> Location.t -> ?on_error:(unit -> 'c) -> 'a -> 'b -> 'c
 (** Matches a value against a pattern. *)
 
+val parse_res :
+  ('a, 'b, 'c) t ->
+  Location.t ->
+  ?on_error:(unit -> 'c) ->
+  'a ->
+  'b ->
+  ('c, extension) result
+(** Matches a value against a pattern and return a result. *)
+
 module Packed : sig
   type ('a, 'b, 'c) pattern = ('a, 'b, 'c) t
   type ('a, 'b) t
 
   val create : ('a, 'b, 'c) pattern -> 'b -> ('a, 'c) t
   val parse : ('a, 'b) t -> Location.t -> 'a -> 'b
+  val parse_res : ('a, 'b) t -> Location.t -> 'a -> ('b, extension) result
 end
 with type ('a, 'b, 'c) pattern := ('a, 'b, 'c) t
 

@@ -267,4 +267,12 @@ module Registrar = struct
         | None -> Location.raise_errorf ~loc:name.loc "%s" msg
         | Some s -> Location.raise_errorf ~loc:name.loc "%s.\n%s" msg s)
       fmt name.txt
+
+  let error_extensionf t context ?white_list fmt (name : string Loc.t) =
+    Printf.ksprintf
+      (fun msg ->
+        match spellcheck t context name.txt ?white_list with
+        | None -> Location.error_extensionf ~loc:name.loc "%s" msg
+        | Some s -> Location.error_extensionf ~loc:name.loc "%s.\n%s" msg s)
+      fmt name.txt
 end

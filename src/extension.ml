@@ -104,6 +104,24 @@ module Context = struct
     | Ppx_import, type_decl -> get_ppx_import_extension type_decl
     | _ -> None
 
+  let ext_item_from_context : type a. a t -> extension -> a =
+   fun t ext ->
+    let open Ast_builder.Default in
+    let loc = Location.none in
+    match t with
+    | Class_expr -> pcl_extension ~loc ext
+    | Class_field -> pcf_extension ~loc ext
+    | Class_type_field -> pctf_extension ~loc ext
+    | Class_type -> pcty_extension ~loc ext
+    | Core_type -> ptyp_extension ~loc ext
+    | Expression -> pexp_extension ~loc ext
+    | Module_expr -> pmod_extension ~loc ext
+    | Module_type -> pmty_extension ~loc ext
+    | Pattern -> ppat_extension ~loc ext
+    | Signature_item -> psig_extension ~loc ext []
+    | Structure_item -> pstr_extension ~loc ext []
+    | Ppx_import -> failwith "todo"
+
   let merge_attributes : type a. a t -> a -> attributes -> a =
    fun t x attrs ->
     match t with
@@ -125,6 +143,27 @@ module Context = struct
     | Ppx_import ->
         assert_no_attributes attrs;
         x
+
+  let merge_attributes_res :
+      type a. a t -> a -> attributes -> (a, extension list) result =
+   fun t x attrs ->
+    match t with
+    | Class_expr -> Ok { x with pcl_attributes = x.pcl_attributes @ attrs }
+    | Class_field -> Ok { x with pcf_attributes = x.pcf_attributes @ attrs }
+    | Class_type -> Ok { x with pcty_attributes = x.pcty_attributes @ attrs }
+    | Class_type_field ->
+        Ok { x with pctf_attributes = x.pctf_attributes @ attrs }
+    | Core_type -> Ok { x with ptyp_attributes = x.ptyp_attributes @ attrs }
+    | Expression -> Ok { x with pexp_attributes = x.pexp_attributes @ attrs }
+    | Module_expr -> Ok { x with pmod_attributes = x.pmod_attributes @ attrs }
+    | Module_type -> Ok { x with pmty_attributes = x.pmty_attributes @ attrs }
+    | Pattern -> Ok { x with ppat_attributes = x.ppat_attributes @ attrs }
+    | Signature_item -> (
+        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
+    | Structure_item -> (
+        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
+    | Ppx_import -> (
+        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
 end
 
 let registrar =
@@ -176,29 +215,33 @@ struct
     let { txt = name; loc } = fst ext in
     let name, arg = Name.split_path name in
     match List.filter ts ~f:(fun t -> Name.Pattern.matches t.name name) with
-    | [] -> None
+    | [] -> Ok None
     | _ :: _ :: _ as l ->
-        Location.raise_errorf ~loc "Multiple match for extensions: %s"
-          (String.concat ~sep:", "
-             (List.map l ~f:(fun t -> Name.Pattern.name t.name)))
+        Error
+          (Location.error_extensionf ~loc "Multiple match for extensions: %s"
+             (String.concat ~sep:", "
+                (List.map l ~f:(fun t -> Name.Pattern.name t.name))))
     | [ t ] ->
         if (not t.with_arg) && Option.is_some arg then
-          Location.raise_errorf ~loc
-            "Extension %s doesn't expect a path argument" name;
-        let arg =
-          Option.map arg ~f:(fun s ->
-              let shift = String.length name + 1 in
-              let start = loc.loc_start in
-              {
-                txt = Longident.parse s;
-                loc =
-                  {
-                    loc with
-                    loc_start = { start with pos_cnum = start.pos_cnum + shift };
-                  };
-              })
-        in
-        Some (t, arg)
+          Error
+            (Location.error_extensionf ~loc
+               "Extension %s doesn't expect a path argument" name)
+        else
+          let arg =
+            Option.map arg ~f:(fun s ->
+                let shift = String.length name + 1 in
+                let start = loc.loc_start in
+                {
+                  txt = Longident.parse s;
+                  loc =
+                    {
+                      loc with
+                      loc_start =
+                        { start with pos_cnum = start.pos_cnum + shift };
+                    };
+                })
+          in
+          Ok (Some (t, arg))
 end
 
 module Expert = struct
@@ -213,10 +256,13 @@ module Expert = struct
     declare ~with_arg:false name ctx patt (fun ~arg:_ -> f)
 
   let convert ts ~loc ext =
-    match find ts ext with
-    | None -> None
+    let open Result in
+    let+ r = find ts ext in
+    match r with
+    | None -> Ok None
     | Some ({ payload = Payload_parser (pattern, f); _ }, arg) ->
-        Some (Ast_pattern.parse pattern loc (snd ext) (f ~arg))
+        let* payload = Ast_pattern.parse_res pattern loc (snd ext) (f ~arg) in
+        Some payload
 end
 
 module M = Make (struct
@@ -231,21 +277,29 @@ module For_context = struct
 
   let convert ts ~ctxt ext =
     let loc = Expansion_context.Extension.extension_point_loc ctxt in
-    match M.find ts ext with
-    | None -> None
+    let open Result in
+    let+ found = M.find ts ext in
+    match found with
+    | None -> Ok None
     | Some ({ payload = M.Payload_parser (pattern, f); _ }, arg) -> (
-        match Ast_pattern.parse pattern loc (snd ext) (f ~ctxt ~arg) with
+        let* payload =
+          Ast_pattern.parse_res pattern loc (snd ext) (f ~ctxt ~arg)
+        in
+        match payload with
         | Simple x -> Some x
         | Inline _ -> failwith "Extension.convert")
 
   let convert_inline ts ~ctxt ext =
     let loc = Expansion_context.Extension.extension_point_loc ctxt in
-    match M.find ts ext with
-    | None -> None
+    let open Result in
+    let+ found = M.find ts ext in
+    match found with
+    | None -> Ok None
     | Some ({ payload = M.Payload_parser (pattern, f); _ }, arg) -> (
-        match Ast_pattern.parse pattern loc (snd ext) (f ~ctxt ~arg) with
-        | Simple x -> Some [ x ]
-        | Inline l -> Some l)
+        let* payload =
+          Ast_pattern.parse_res pattern loc (snd ext) (f ~ctxt ~arg)
+        in
+        match payload with Simple x -> Some [ x ] | Inline l -> Some l)
 end
 
 type t = T : _ For_context.t -> t
@@ -279,6 +333,18 @@ let fail ctx (name, _) =
   then
     Name.Registrar.raise_errorf registrar (Context.T ctx)
       "Extension `%s' was not translated" name
+
+let fail_fold ctx (name, _) =
+  if
+    not
+      (Name.Whitelisted.is_whitelisted ~kind:`Extension name.txt
+      || Name.ignore_checks name.txt)
+  then
+    [
+      Name.Registrar.error_extensionf registrar (Context.T ctx)
+        "Extension `%s' was not translated" name;
+    ]
+  else []
 
 let check_unused =
   object
@@ -337,6 +403,73 @@ let check_unused =
       function
       | Pstr_extension (ext, _) -> fail Structure_item ext
       | x -> super#structure_item_desc x
+  end
+
+let check_unused_fold =
+  object
+    inherit [extension list] Ast_traverse.fold as super
+
+    method! extension (name, _) acc =
+      acc
+      @ [
+          Location.error_extensionf ~loc:name.loc
+            "extension not expected here, Ppxlib.Extension needs updating!";
+        ]
+
+    method! core_type_desc x acc =
+      match x with
+      | Ptyp_extension ext -> acc @ fail_fold Core_type ext
+      | x -> super#core_type_desc x acc
+
+    method! pattern_desc x acc =
+      match x with
+      | Ppat_extension ext -> acc @ fail_fold Pattern ext
+      | x -> super#pattern_desc x acc
+
+    method! expression_desc x acc =
+      match x with
+      | Pexp_extension ext -> acc @ fail_fold Expression ext
+      | x -> super#expression_desc x acc
+
+    method! class_type_desc x acc =
+      match x with
+      | Pcty_extension ext -> acc @ fail_fold Class_type ext
+      | x -> super#class_type_desc x acc
+
+    method! class_type_field_desc x acc =
+      match x with
+      | Pctf_extension ext -> acc @ fail_fold Class_type_field ext
+      | x -> super#class_type_field_desc x acc
+
+    method! class_expr_desc x acc =
+      match x with
+      | Pcl_extension ext -> acc @ fail_fold Class_expr ext
+      | x -> super#class_expr_desc x acc
+
+    method! class_field_desc x acc =
+      match x with
+      | Pcf_extension ext -> acc @ fail_fold Class_field ext
+      | x -> super#class_field_desc x acc
+
+    method! module_type_desc x acc =
+      match x with
+      | Pmty_extension ext -> acc @ fail_fold Module_type ext
+      | x -> super#module_type_desc x acc
+
+    method! signature_item_desc x acc =
+      match x with
+      | Psig_extension (ext, _) -> acc @ fail_fold Signature_item ext
+      | x -> super#signature_item_desc x acc
+
+    method! module_expr_desc x acc =
+      match x with
+      | Pmod_extension ext -> acc @ fail_fold Module_expr ext
+      | x -> super#module_expr_desc x acc
+
+    method! structure_item_desc x acc =
+      match x with
+      | Pstr_extension (ext, _) -> acc @ fail_fold Structure_item ext
+      | x -> super#structure_item_desc x acc
   end
 
 module V3 = struct

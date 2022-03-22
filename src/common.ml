@@ -172,6 +172,21 @@ let assert_no_attributes_in =
     method! attribute a = assert_no_attributes [ a ]
   end
 
+let assert_no_attributes_fold =
+  List.filter_map ~f:(function
+    | { attr_name = name; attr_loc = _; attr_payload = _ }
+      when Name.ignore_checks name.Location.txt ->
+        None
+    | attr ->
+        let loc = loc_of_attribute attr in
+        Some (Location.error_extensionf ~loc "Attributes not allowed here"))
+
+let assert_no_attributes_in_fold =
+  object
+    inherit [extension list] Ast_traverse.fold
+    method! attribute a acc = assert_no_attributes_fold [ a ] @ acc
+  end
+
 let attribute_of_warning loc s =
   {
     attr_name = { loc; txt = "ocaml.ppwarning" };
