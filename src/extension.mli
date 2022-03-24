@@ -35,7 +35,7 @@ module Context : sig
   val merge_attributes : 'a t -> 'a -> attributes -> 'a
 
   val merge_attributes_res :
-    'a t -> 'a -> attributes -> ('a, extension list) result
+    'a t -> 'a -> attributes -> ('a, Location.Error.t NonEmptyList.t) result
 end
 
 type t
@@ -103,13 +103,13 @@ module For_context : sig
     'a t list ->
     ctxt:Expansion_context.Extension.t ->
     extension ->
-    ('a option, extension) result
+    ('a option, Location.Error.t NonEmptyList.t) result
 
   val convert_inline :
     'a t list ->
     ctxt:Expansion_context.Extension.t ->
     extension ->
-    ('a list option, extension) result
+    ('a list option, Location.Error.t NonEmptyList.t) result
 end
 
 val filter_by_context : 'a Context.t -> t list -> 'a For_context.t list
@@ -145,7 +145,7 @@ module Expert : sig
     (_, 'a) t list ->
     loc:Location.t ->
     extension ->
-    ('a option, extension) result
+    ('a option, Location.Error.t NonEmptyList.t) result
 end
 
 val check_unused : Ast_traverse.iter

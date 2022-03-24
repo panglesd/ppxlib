@@ -145,7 +145,8 @@ module Context = struct
         x
 
   let merge_attributes_res :
-      type a. a t -> a -> attributes -> (a, extension list) result =
+      type a.
+      a t -> a -> attributes -> (a, Location.Error.t NonEmptyList.t) result =
    fun t x attrs ->
     match t with
     | Class_expr -> Ok { x with pcl_attributes = x.pcl_attributes @ attrs }
@@ -159,11 +160,17 @@ module Context = struct
     | Module_type -> Ok { x with pmty_attributes = x.pmty_attributes @ attrs }
     | Pattern -> Ok { x with ppat_attributes = x.ppat_attributes @ attrs }
     | Signature_item -> (
-        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
+        match assert_no_attributes_fold attrs with
+        | [] -> Ok x
+        | t :: q -> Error (t, q))
     | Structure_item -> (
-        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
+        match assert_no_attributes_fold attrs with
+        | [] -> Ok x
+        | t :: q -> Error (t, q))
     | Ppx_import -> (
-        match assert_no_attributes_fold attrs with [] -> Ok x | l -> Error l)
+        match assert_no_attributes_fold attrs with
+        | [] -> Ok x
+        | t :: q -> Error (t, q))
 end
 
 let registrar =
@@ -218,14 +225,16 @@ struct
     | [] -> Ok None
     | _ :: _ :: _ as l ->
         Error
-          (Location.error_extensionf ~loc "Multiple match for extensions: %s"
-             (String.concat ~sep:", "
-                (List.map l ~f:(fun t -> Name.Pattern.name t.name))))
+          ( Location.Error.createf ~loc "Multiple match for extensions: %s"
+              (String.concat ~sep:", "
+                 (List.map l ~f:(fun t -> Name.Pattern.name t.name))),
+            [] )
     | [ t ] ->
         if (not t.with_arg) && Option.is_some arg then
           Error
-            (Location.error_extensionf ~loc
-               "Extension %s doesn't expect a path argument" name)
+            ( Location.Error.createf ~loc
+                "Extension %s doesn't expect a path argument" name,
+              [] )
         else
           let arg =
             Option.map arg ~f:(fun s ->

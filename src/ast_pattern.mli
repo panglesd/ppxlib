@@ -86,7 +86,7 @@ val parse_res :
   ?on_error:(unit -> 'c) ->
   'a ->
   'b ->
-  ('c, extension) result
+  ('c, Location.Error.t NonEmptyList.t) result
 (** Matches a value against a pattern and return a result. *)
 
 module Packed : sig
@@ -95,7 +95,12 @@ module Packed : sig
 
   val create : ('a, 'b, 'c) pattern -> 'b -> ('a, 'c) t
   val parse : ('a, 'b) t -> Location.t -> 'a -> 'b
-  val parse_res : ('a, 'b) t -> Location.t -> 'a -> ('b, extension) result
+
+  val parse_res :
+    ('a, 'b) t ->
+    Location.t ->
+    'a ->
+    ('b, Location.Error.t NonEmptyList.t) result
 end
 with type ('a, 'b, 'c) pattern := ('a, 'b, 'c) t
 

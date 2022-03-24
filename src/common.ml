@@ -179,11 +179,12 @@ let assert_no_attributes_fold =
         None
     | attr ->
         let loc = loc_of_attribute attr in
-        Some (Location.error_extensionf ~loc "Attributes not allowed here"))
+        Some (Location.Error.createf ~loc "Attributes not allowed here"))
+(* Some (Location.error_extensionf ~loc "Attributes not allowed here")) *)
 
 let assert_no_attributes_in_fold =
   object
-    inherit [extension list] Ast_traverse.fold
+    inherit [Location.Error.t list] Ast_traverse.fold
     method! attribute a acc = assert_no_attributes_fold [ a ] @ acc
   end
 

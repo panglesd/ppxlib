@@ -134,15 +134,20 @@ val get :
   ('a, 'b) t ->
   ?mark_as_seen:bool (** default [true] *) ->
   'a ->
-  ('b option, extension) result
+  ('b option, Location.Error.t NonEmptyList.t) result
 (** Gets the associated attribute value. Marks the attribute as seen unless
     [mark_as_seen=false]. Returns an [Error] if the attribute has is duplicated*)
 
-val consume : ('a, 'b) t -> 'a -> (('a * 'b) option, extension) result
+val consume :
+  ('a, 'b) t -> 'a -> (('a * 'b) option, Location.Error.t NonEmptyList.t) result
 (** [consume t x] returns the value associated to attribute [t] on [x] if
     present as well as [x] with [t] removed. *)
 
-val remove_seen : 'a Context.t -> packed list -> 'a -> ('a, extension) result
+val remove_seen :
+  'a Context.t ->
+  packed list ->
+  'a ->
+  ('a, Location.Error.t NonEmptyList.t) result
 (** [remove_seen x attrs] removes the set of attributes matched by elements of
     [attrs]. Only remove them if they where seen by {!get} or {!consume}. *)
 
@@ -170,7 +175,9 @@ module Floating : sig
     ('a, 'c) t
 
   val name : _ t -> string
-  val convert : ('a, 'b) t list -> 'a -> ('b option, extension) result
+
+  val convert :
+    ('a, 'b) t list -> 'a -> ('b option, Location.Error.t NonEmptyList.t) result
 end
 
 val explicitly_drop : Ast_traverse.iter
@@ -210,4 +217,7 @@ val reset_checks : unit -> unit
 val pattern :
   ('a, 'b) t ->
   ('a, 'c, 'd) Ast_pattern.t ->
-  ('a, 'b option -> 'c, ('d, Import.extension) result) Ast_pattern0.t
+  ( 'a,
+    'b option -> 'c,
+    ('d, Location.Error.t NonEmptyList.t) result )
+  Ast_pattern0.t

@@ -320,8 +320,8 @@ let get_internal =
               else if len < len' then find_best_match t rest longest_match
               else
                 Error
-                  (Location.error_extensionf ~loc:name.loc
-                     "Duplicated attribute")
+                  ( Location.Error.createf ~loc:name.loc "Duplicated attribute",
+                    [] )
         else find_best_match t rest longest_match
   in
   fun t attributes -> find_best_match t attributes None
@@ -426,10 +426,11 @@ module Floating = struct
             Some value
         | l ->
             Error
-              (Location.error_extensionf ~loc:name.loc
-                 "Multiple match for floating attributes: %s"
-                 (String.concat ~sep:", "
-                    (List.map l ~f:(fun t -> Name.Pattern.name t.name)))))
+              ( Location.Error.createf ~loc:name.loc
+                  "Multiple match for floating attributes: %s"
+                  (String.concat ~sep:", "
+                     (List.map l ~f:(fun t -> Name.Pattern.name t.name))),
+                [] ))
 end
 
 let check_attribute registrar context name =

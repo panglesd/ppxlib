@@ -44,9 +44,9 @@ struct
             { Location.loc_start = pos; loc_end = pos; loc_ghost = false }
           in
           Error
-            (Location.error_extensionf ~loc
-               "ppxlib: [@@@@@@%s] attribute missing"
-               (Attribute.Floating.name M.end_marker))
+            ( Location.Error.createf ~loc "ppxlib: [@@@@@@%s] attribute missing"
+                (Attribute.Floating.name M.end_marker),
+              [] )
       | x :: l -> (
           match Attribute.Floating.convert [ M.end_marker ] x with
           | Ok None -> loop (x :: acc) l

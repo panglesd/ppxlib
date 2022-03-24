@@ -15,8 +15,8 @@ val gen_symbol : ?prefix:string -> unit -> string
 val string_of_core_type : core_type -> string
 val assert_no_attributes : attributes -> unit
 val assert_no_attributes_in : Ast_traverse.iter
-val assert_no_attributes_fold : attributes -> extension list
-val assert_no_attributes_in_fold : extension list Ast_traverse.fold
+val assert_no_attributes_fold : attributes -> Location.Error.t list
+val assert_no_attributes_in_fold : Location.Error.t list Ast_traverse.fold
 
 val get_type_param_name : core_type * (variance * injectivity) -> string Loc.t
 (** [get_tparam_id tp] returns the string identifier associated with [tp] if it

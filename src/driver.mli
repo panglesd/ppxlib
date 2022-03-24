@@ -21,7 +21,7 @@ module Cookies : sig
     t ->
     string ->
     (expression, 'a -> 'a, 'b) Ast_pattern.t ->
-    ('b option, extension) result
+    ('b option, Location.Error.t NonEmptyList.t) result
   (** [get cookies name pattern] look for a cookie named [name] and parse it
       using [pattern], returning a [result] instead of raising when the parsing
       fails. *)

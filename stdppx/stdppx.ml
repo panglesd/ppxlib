@@ -274,9 +274,19 @@ end
 module Result = struct
   let bind t ~f = match t with Ok a -> f a | Error e -> Error e
   let map t ~f = match t with Ok a -> Ok (f a) | Error e -> Error e
+  let map_error t ~f = match t with Ok a -> Ok (f a) | Error e -> Error e
   let ( let+ ) t f = bind t ~f
   let ( let* ) t f = map t ~f
   let handle_error t ~f = match t with Ok a -> a | Error e -> f e
+end
+
+module NonEmptyList = struct
+  type 'a t = 'a * 'a list
+
+  let ( @ ) (t1, q1) (t2, q2) = (t1, q1 @ (t2 :: q2))
+  let hd = fst
+  let to_list (t, q) = t :: q
+  let map ~f (t, q) = (f t, List.map ~f q)
 end
 
 module Out_channel = struct
