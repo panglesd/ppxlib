@@ -651,24 +651,27 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                           item.pstr_loc (Many items);
                       items @ loop rest ~in_generated_code)
                     else
-                      no_attributes_errors
+                      (no_attributes_errors
                       |> List.map ~f:Location.Error.to_extension
                       |> List.map
-                           ~f:(EC.ext_item_from_context EC.Structure_item)
+                           ~f:(EC.ext_item_from_context EC.Structure_item))
+                      @ loop rest ~in_generated_code
                 | Error err ->
-                    err
+                    (err
                     |> NonEmptyList.map ~f:Location.Error.to_extension
                     |> NonEmptyList.map
                          ~f:(EC.ext_item_from_context EC.Structure_item)
                     |> NonEmptyList.to_list)
+                    @ loop rest ~in_generated_code)
             | _ -> (
                 let error_of_extension e =
-                  e
+                  (e
                   |> NonEmptyList.map ~f:Location.Error.to_extension
                   |> NonEmptyList.map ~f:(fun e ->
                          Ast_builder.Default.pstr_extension ~loc:Location.none e
                            [])
-                  |> NonEmptyList.to_list
+                  |> NonEmptyList.to_list)
+                  @ loop rest ~in_generated_code
                 in
                 let expanded_item = super#structure_item base_ctxt item in
                 match (item.pstr_desc, expanded_item.pstr_desc) with
@@ -783,24 +786,27 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                           item.psig_loc (Many items);
                       items @ loop rest ~in_generated_code)
                     else
-                      no_attributes_errors
+                      (no_attributes_errors
                       |> List.map ~f:Location.Error.to_extension
                       |> List.map
-                           ~f:(EC.ext_item_from_context EC.Signature_item)
+                           ~f:(EC.ext_item_from_context EC.Signature_item))
+                      @ loop rest ~in_generated_code
                 | Error err ->
-                    err
+                    (err
                     |> NonEmptyList.map ~f:Location.Error.to_extension
                     |> NonEmptyList.map
                          ~f:(EC.ext_item_from_context EC.Signature_item)
                     |> NonEmptyList.to_list)
+                    @ loop rest ~in_generated_code)
             | _ -> (
                 let error_of_extension e =
-                  e
+                  (e
                   |> NonEmptyList.map ~f:Location.Error.to_extension
                   |> NonEmptyList.map ~f:(fun e ->
                          Ast_builder.Default.psig_extension ~loc:Location.none e
                            [])
-                  |> NonEmptyList.to_list
+                  |> NonEmptyList.to_list)
+                  @ loop rest ~in_generated_code
                 in
                 let expanded_item = super#signature_item base_ctxt item in
                 match (item.psig_desc, expanded_item.psig_desc) with
