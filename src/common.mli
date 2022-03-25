@@ -4,6 +4,9 @@ val lident : string -> Longident.t
 val core_type_of_type_declaration : type_declaration -> core_type
 val name_type_params_in_td : type_declaration -> type_declaration
 
+val name_type_params_in_td_res :
+  type_declaration -> (type_declaration, Location.Error.t NonEmptyList.t) result
+
 val combinator_type_of_type_declaration :
   type_declaration -> f:(loc:Location.t -> core_type -> core_type) -> core_type
 
@@ -15,8 +18,14 @@ val gen_symbol : ?prefix:string -> unit -> string
 val string_of_core_type : core_type -> string
 val assert_no_attributes : attributes -> unit
 val assert_no_attributes_in : Ast_traverse.iter
-val assert_no_attributes_fold : attributes -> Location.Error.t list
-val assert_no_attributes_in_fold : Location.Error.t list Ast_traverse.fold
+val no_attributes_errors : attributes -> Location.Error.t list
+val no_attributes_errors_in : Location.Error.t list Ast_traverse.fold
+
+val get_type_param_name_res :
+  core_type * (variance * injectivity) ->
+  (string Loc.t, Location.Error.t NonEmptyList.t) result
+(** [get_tparam_id tp] returns the string identifier associated with [tp] if it
+    is a type parameter. *)
 
 val get_type_param_name : core_type * (variance * injectivity) -> string Loc.t
 (** [get_tparam_id tp] returns the string identifier associated with [tp] if it

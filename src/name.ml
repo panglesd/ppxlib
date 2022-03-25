@@ -258,21 +258,23 @@ module Registrar = struct
                       Format.fprintf ppf ",@ "))
                  others pp_text last current_context))
 
-  (* TODO: hint spelling errors regarding reserved namespaces names and white
-     listed names instead of taking an optional [white_list] parameter. *)
-  let raise_errorf t context ?white_list fmt (name : string Loc.t) =
-    Printf.ksprintf
-      (fun msg ->
-        match spellcheck t context name.txt ?white_list with
-        | None -> Location.raise_errorf ~loc:name.loc "%s" msg
-        | Some s -> Location.raise_errorf ~loc:name.loc "%s.\n%s" msg s)
-      fmt name.txt
+  module Error = struct
+    (* TODO: hint spelling errors regarding reserved namespaces names and white
+       listed names instead of taking an optional [white_list] parameter. *)
+    let createf t context ?white_list fmt (name : string Loc.t) =
+      Printf.ksprintf
+        (fun msg ->
+          match spellcheck t context name.txt ?white_list with
+          | None -> Location.Error.createf ~loc:name.loc "%s" msg
+          | Some s -> Location.Error.createf ~loc:name.loc "%s.\n%s" msg s)
+        fmt name.txt
 
-  let error_extensionf t context ?white_list fmt (name : string Loc.t) =
-    Printf.ksprintf
-      (fun msg ->
-        match spellcheck t context name.txt ?white_list with
-        | None -> Location.error_extensionf ~loc:name.loc "%s" msg
-        | Some s -> Location.error_extensionf ~loc:name.loc "%s.\n%s" msg s)
-      fmt name.txt
+    let raise_errorf t context ?white_list fmt (name : string Loc.t) =
+      Location.Error.raise @@ createf t context ?white_list fmt name
+
+    let error_extensionf t context ?white_list fmt (name : string Loc.t) =
+      Location.Error.to_extension @@ createf t context ?white_list fmt name
+  end
+
+  let raise_errorf = Error.raise_errorf
 end

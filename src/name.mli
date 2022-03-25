@@ -54,21 +54,39 @@ module Registrar : sig
   val spellcheck :
     'context t -> 'context -> ?white_list:string list -> string -> string option
 
+  module Error : sig
+    val createf :
+      'context t ->
+      'context ->
+      ?white_list:string list ->
+      (string -> Location.Error.t, unit, string, Location.Error.t) format4 ->
+      string Loc.t ->
+      Location.Error.t
+
+    val raise_errorf :
+      'context t ->
+      'context ->
+      ?white_list:string list ->
+      (string -> Location.Error.t, unit, string, Location.Error.t) format4 ->
+      string Loc.t ->
+      'a
+
+    val error_extensionf :
+      'context t ->
+      'context ->
+      ?white_list:string list ->
+      (string -> Location.Error.t, unit, string, Location.Error.t) format4 ->
+      string Loc.t ->
+      extension
+  end
+
   val raise_errorf :
     'context t ->
     'context ->
     ?white_list:string list ->
-    (string -> 'a, unit, string, 'c) format4 ->
+    (string -> Location.Error.t, unit, string, Location.Error.t) format4 ->
     string Loc.t ->
     'a
-
-  val error_extensionf :
-    'context t ->
-    'context ->
-    ?white_list:string list ->
-    (string -> extension, unit, string, extension) format4 ->
-    string Loc.t ->
-    extension
 end
 
 module Whitelisted : sig

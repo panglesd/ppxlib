@@ -37,21 +37,33 @@ let gen_symbol =
     let prefix = strip_gen_symbol_suffix prefix in
     Printf.sprintf "%s__%03i_" prefix !cnt
 
-let name_type_params_in_td (td : type_declaration) : type_declaration =
+let name_type_params_in_td_res (td : type_declaration) :
+    (type_declaration, _) result =
+  let open Result in
   let prefix_string i =
     (* a, b, ..., y, z, aa, bb, ... *)
     String.make ((i / 26) + 1) (Char.chr (Char.code 'a' + (i mod 26)))
   in
   let name_param i (tp, variance) =
-    let ptyp_desc =
+    let* ptyp_desc =
       match tp.ptyp_desc with
-      | Ptyp_any -> Ptyp_var (gen_symbol ~prefix:(prefix_string i) ())
-      | Ptyp_var _ as v -> v
-      | _ -> Location.raise_errorf ~loc:tp.ptyp_loc "not a type parameter"
+      | Ptyp_any -> Ok (Ptyp_var (gen_symbol ~prefix:(prefix_string i) ()))
+      | Ptyp_var _ as v -> Ok v
+      | _ ->
+          Error (Location.Error.createf ~loc:tp.ptyp_loc "not a type parameter")
     in
     ({ tp with ptyp_desc }, variance)
   in
-  { td with ptype_params = List.mapi td.ptype_params ~f:name_param }
+  let ptype_params, errors =
+    td.ptype_params |> List.mapi ~f:name_param
+    |> List.partition_map ~f:(function Ok o -> Left o | Error e -> Right e)
+  in
+  match errors with [] -> Ok { td with ptype_params } | t :: q -> Error (t, q)
+
+let name_type_params_in_td (td : type_declaration) : type_declaration =
+  match name_type_params_in_td_res td with
+  | Ok res -> res
+  | Error (err, _) -> Location.Error.raise err
 
 let combinator_type_of_type_declaration td ~f =
   let td = name_type_params_in_td td in
@@ -70,11 +82,16 @@ let string_of_core_type ct =
   Format.pp_print_flush ppf ();
   Buffer.contents buf
 
-let get_type_param_name (ty, _) =
+let get_type_param_name_res (ty, _) =
   let loc = ty.ptyp_loc in
   match ty.ptyp_desc with
-  | Ptyp_var name -> Located.mk ~loc name
-  | _ -> Location.raise_errorf ~loc "not a type parameter"
+  | Ptyp_var name -> Ok (Located.mk ~loc name)
+  | _ -> Error (Location.Error.createf ~loc "not a type parameter", [])
+
+let get_type_param_name t =
+  match get_type_param_name_res t with
+  | Ok e -> e
+  | Error (err, _) -> Location.Error.raise err
 
 exception Type_is_recursive
 
@@ -157,22 +174,7 @@ let curry_applications expr =
       loop (List.rev orig_forward_args)
   | _ -> expr
 
-let rec assert_no_attributes = function
-  | [] -> ()
-  | { attr_name = name; attr_loc = _; attr_payload = _ } :: rest
-    when Name.ignore_checks name.Location.txt ->
-      assert_no_attributes rest
-  | attr :: _ ->
-      let loc = loc_of_attribute attr in
-      Location.raise_errorf ~loc "Attributes not allowed here"
-
-let assert_no_attributes_in =
-  object
-    inherit Ast_traverse.iter
-    method! attribute a = assert_no_attributes [ a ]
-  end
-
-let assert_no_attributes_fold =
+let no_attributes_errors =
   List.filter_map ~f:(function
     | { attr_name = name; attr_loc = _; attr_payload = _ }
       when Name.ignore_checks name.Location.txt ->
@@ -180,12 +182,22 @@ let assert_no_attributes_fold =
     | attr ->
         let loc = loc_of_attribute attr in
         Some (Location.Error.createf ~loc "Attributes not allowed here"))
-(* Some (Location.error_extensionf ~loc "Attributes not allowed here")) *)
 
-let assert_no_attributes_in_fold =
+let no_attributes_errors_in =
   object
     inherit [Location.Error.t list] Ast_traverse.fold
-    method! attribute a acc = assert_no_attributes_fold [ a ] @ acc
+    method! attribute a acc = no_attributes_errors [ a ] @ acc
+  end
+
+let assert_no_attributes l =
+  match no_attributes_errors l with
+  | [] -> ()
+  | err :: _ -> Location.Error.raise err
+
+let assert_no_attributes_in =
+  object
+    inherit Ast_traverse.iter
+    method! attribute a = assert_no_attributes [ a ]
   end
 
 let attribute_of_warning loc s =

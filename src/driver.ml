@@ -626,11 +626,11 @@ let map_structure_gen st ~tool_name ~hook ~expect_mismatch_handler ~input_name
         (* TODO: these two passes could be merged, we now have more passes for
            checks than for actual rewriting. *)
         let unused_attributes_errors =
-          Attribute.check_unused_fold#structure st []
+          Attribute.collect_unused_attributes_errors#structure st []
         in
         let unused_extension_errors =
           if !perform_checks_on_extensions then
-            Extension.check_unused_fold#structure st []
+            Extension.collect_unhandled_extension_errors#structure st []
           else []
         in
         let not_seen_errors = Attribute.check_all_seen () in
@@ -643,8 +643,10 @@ let map_structure_gen st ~tool_name ~hook ~expect_mismatch_handler ~input_name
         let errors =
           unused_attributes_errors @ unused_extension_errors @ not_seen_errors
         in
-        List.map errors ~f:(fun e ->
-            Ast_builder.Default.pstr_extension ~loc:Location.none e []))
+        errors
+        |> List.map ~f:Location.Error.to_extension
+        |> List.map ~f:(fun e ->
+               Ast_builder.Default.pstr_extension ~loc:Location.none e []))
       else []
     in
     errors @ st
@@ -699,11 +701,11 @@ let map_signature_gen sg ~tool_name ~hook ~expect_mismatch_handler ~input_name
         (* TODO: these two passes could be merged, we now have more passes for
            checks than for actual rewriting. *)
         let unused_attributes_errors =
-          Attribute.check_unused_fold#signature sg []
+          Attribute.collect_unused_attributes_errors#signature sg []
         in
         let unused_extension_errors =
           if !perform_checks_on_extensions then
-            Extension.check_unused_fold#signature sg []
+            Extension.collect_unhandled_extension_errors#signature sg []
           else []
         in
         let not_seen_errors = Attribute.check_all_seen () in
@@ -716,8 +718,10 @@ let map_signature_gen sg ~tool_name ~hook ~expect_mismatch_handler ~input_name
         let errors =
           unused_attributes_errors @ unused_extension_errors @ not_seen_errors
         in
-        List.map errors ~f:(fun e ->
-            Ast_builder.Default.psig_extension ~loc:Location.none e []))
+        errors
+        |> List.map ~f:Location.Error.to_extension
+        |> List.map ~f:(fun e ->
+               Ast_builder.Default.psig_extension ~loc:Location.none e []))
       else []
     in
     errors @ sg

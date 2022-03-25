@@ -266,7 +266,7 @@ let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
               in
               x :: l
           | Ok (Some x) ->
-              let no_attributes_errors = assert_no_attributes_fold attrs in
+              let no_attributes_errors = no_attributes_errors attrs in
               if List.length no_attributes_errors = 0 then (
                 let generated_code =
                   map_nodes context ts super_call get_loc base_ctxt x ~hook
@@ -640,9 +640,7 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                     let rest = self#structure base_ctxt rest in
                     item :: rest
                 | Ok (Some items) ->
-                    let no_attributes_errors =
-                      assert_no_attributes_fold attrs
-                    in
+                    let no_attributes_errors = no_attributes_errors attrs in
                     if List.length no_attributes_errors = 0 then (
                       (* assert_no_attributes attrs; *)
                       let items = loop items ~in_generated_code:true in
@@ -775,9 +773,7 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                     let rest = self#signature base_ctxt rest in
                     item :: rest
                 | Ok (Some items) ->
-                    let no_attributes_errors =
-                      assert_no_attributes_fold attrs
-                    in
+                    let no_attributes_errors = no_attributes_errors attrs in
                     if List.length no_attributes_errors = 0 then (
                       (* assert_no_attributes attrs; *)
                       let items = loop items ~in_generated_code:true in

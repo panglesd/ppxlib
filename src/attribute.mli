@@ -187,14 +187,14 @@ val explicitly_drop : Ast_traverse.iter
 val check_unused : Ast_traverse.iter
 (** Raise if there are unused attributes *)
 
-val check_unused_fold : extension list Ast_traverse.fold
+val collect_unused_attributes_errors : Location.Error.t list Ast_traverse.fold
 (** Collect all errors due to unused attributes *)
 
 val collect : Ast_traverse.iter
 (** Collect all attribute names. To be used in conjunction with
     {!check_all_seen}. *)
 
-val check_all_seen : unit -> extension list
+val check_all_seen : unit -> Location.Error.t list
 (** Check that all attributes collected by {!freshen_and_collect} have been:
 
     - matched at least once by one of: {!get}, {!consume} or {!Floating.convert}

@@ -160,15 +160,15 @@ module Context = struct
     | Module_type -> Ok { x with pmty_attributes = x.pmty_attributes @ attrs }
     | Pattern -> Ok { x with ppat_attributes = x.ppat_attributes @ attrs }
     | Signature_item -> (
-        match assert_no_attributes_fold attrs with
+        match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
     | Structure_item -> (
-        match assert_no_attributes_fold attrs with
+        match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
     | Ppx_import -> (
-        match assert_no_attributes_fold attrs with
+        match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
 end
@@ -334,26 +334,92 @@ let rec filter_by_context :
       | Eq -> t :: filter_by_context context rest
       | Ne -> filter_by_context context rest)
 
-let fail ctx (name, _) =
-  if
-    not
-      (Name.Whitelisted.is_whitelisted ~kind:`Extension name.txt
-      || Name.ignore_checks name.txt)
-  then
-    Name.Registrar.raise_errorf registrar (Context.T ctx)
-      "Extension `%s' was not translated" name
-
-let fail_fold ctx (name, _) =
+let unhandled_extension_error ctx (name, _) =
   if
     not
       (Name.Whitelisted.is_whitelisted ~kind:`Extension name.txt
       || Name.ignore_checks name.txt)
   then
     [
-      Name.Registrar.error_extensionf registrar (Context.T ctx)
+      Name.Registrar.Error.createf registrar (Context.T ctx)
         "Extension `%s' was not translated" name;
     ]
   else []
+
+let fail ctx n =
+  match unhandled_extension_error ctx n with
+  | err :: _ -> Location.Error.raise err
+  | [] -> ()
+
+let collect_unhandled_extension_errors =
+  object
+    inherit [Location.Error.t list] Ast_traverse.fold as super
+
+    method! extension (name, _) acc =
+      acc
+      @ [
+          Location.Error.createf ~loc:name.loc
+            "extension not expected here, Ppxlib.Extension needs updating!";
+        ]
+
+    method! core_type_desc x acc =
+      match x with
+      | Ptyp_extension ext -> acc @ unhandled_extension_error Core_type ext
+      | x -> super#core_type_desc x acc
+
+    method! pattern_desc x acc =
+      match x with
+      | Ppat_extension ext -> acc @ unhandled_extension_error Pattern ext
+      | x -> super#pattern_desc x acc
+
+    method! expression_desc x acc =
+      match x with
+      | Pexp_extension ext -> acc @ unhandled_extension_error Expression ext
+      | x -> super#expression_desc x acc
+
+    method! class_type_desc x acc =
+      match x with
+      | Pcty_extension ext -> acc @ unhandled_extension_error Class_type ext
+      | x -> super#class_type_desc x acc
+
+    method! class_type_field_desc x acc =
+      match x with
+      | Pctf_extension ext ->
+          acc @ unhandled_extension_error Class_type_field ext
+      | x -> super#class_type_field_desc x acc
+
+    method! class_expr_desc x acc =
+      match x with
+      | Pcl_extension ext -> acc @ unhandled_extension_error Class_expr ext
+      | x -> super#class_expr_desc x acc
+
+    method! class_field_desc x acc =
+      match x with
+      | Pcf_extension ext -> acc @ unhandled_extension_error Class_field ext
+      | x -> super#class_field_desc x acc
+
+    method! module_type_desc x acc =
+      match x with
+      | Pmty_extension ext -> acc @ unhandled_extension_error Module_type ext
+      | x -> super#module_type_desc x acc
+
+    method! signature_item_desc x acc =
+      match x with
+      | Psig_extension (ext, _) ->
+          acc @ unhandled_extension_error Signature_item ext
+      | x -> super#signature_item_desc x acc
+
+    method! module_expr_desc x acc =
+      match x with
+      | Pmod_extension ext -> acc @ unhandled_extension_error Module_expr ext
+      | x -> super#module_expr_desc x acc
+
+    method! structure_item_desc x acc =
+      match x with
+      | Pstr_extension (ext, _) ->
+          acc @ unhandled_extension_error Structure_item ext
+      | x -> super#structure_item_desc x acc
+  end
 
 let check_unused =
   object
@@ -412,73 +478,6 @@ let check_unused =
       function
       | Pstr_extension (ext, _) -> fail Structure_item ext
       | x -> super#structure_item_desc x
-  end
-
-let check_unused_fold =
-  object
-    inherit [extension list] Ast_traverse.fold as super
-
-    method! extension (name, _) acc =
-      acc
-      @ [
-          Location.error_extensionf ~loc:name.loc
-            "extension not expected here, Ppxlib.Extension needs updating!";
-        ]
-
-    method! core_type_desc x acc =
-      match x with
-      | Ptyp_extension ext -> acc @ fail_fold Core_type ext
-      | x -> super#core_type_desc x acc
-
-    method! pattern_desc x acc =
-      match x with
-      | Ppat_extension ext -> acc @ fail_fold Pattern ext
-      | x -> super#pattern_desc x acc
-
-    method! expression_desc x acc =
-      match x with
-      | Pexp_extension ext -> acc @ fail_fold Expression ext
-      | x -> super#expression_desc x acc
-
-    method! class_type_desc x acc =
-      match x with
-      | Pcty_extension ext -> acc @ fail_fold Class_type ext
-      | x -> super#class_type_desc x acc
-
-    method! class_type_field_desc x acc =
-      match x with
-      | Pctf_extension ext -> acc @ fail_fold Class_type_field ext
-      | x -> super#class_type_field_desc x acc
-
-    method! class_expr_desc x acc =
-      match x with
-      | Pcl_extension ext -> acc @ fail_fold Class_expr ext
-      | x -> super#class_expr_desc x acc
-
-    method! class_field_desc x acc =
-      match x with
-      | Pcf_extension ext -> acc @ fail_fold Class_field ext
-      | x -> super#class_field_desc x acc
-
-    method! module_type_desc x acc =
-      match x with
-      | Pmty_extension ext -> acc @ fail_fold Module_type ext
-      | x -> super#module_type_desc x acc
-
-    method! signature_item_desc x acc =
-      match x with
-      | Psig_extension (ext, _) -> acc @ fail_fold Signature_item ext
-      | x -> super#signature_item_desc x acc
-
-    method! module_expr_desc x acc =
-      match x with
-      | Pmod_extension ext -> acc @ fail_fold Module_expr ext
-      | x -> super#module_expr_desc x acc
-
-    method! structure_item_desc x acc =
-      match x with
-      | Pstr_extension (ext, _) -> acc @ fail_fold Structure_item ext
-      | x -> super#structure_item_desc x acc
   end
 
 module V3 = struct

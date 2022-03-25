@@ -441,7 +441,7 @@ let check_attribute registrar context name =
     && Attribute_table.mem not_seen name
   then
     let white_list = Name.Whitelisted.get_attribute_list () in
-    Name.Registrar.raise_errorf registrar context ~white_list
+    Name.Registrar.Error.raise_errorf registrar context ~white_list
       "Attribute `%s' was not used" name
 
 let check_unused =
@@ -583,7 +583,7 @@ let check_unused =
       super#signature_item item
   end
 
-let check_attribute_fold registrar context name =
+let collect_attribute_errors registrar context name =
   if
     (not
        (Name.Whitelisted.is_whitelisted ~kind:`Attribute name.txt
@@ -592,22 +592,23 @@ let check_attribute_fold registrar context name =
   then
     let white_list = Name.Whitelisted.get_attribute_list () in
     [
-      Name.Registrar.error_extensionf registrar context ~white_list
+      Name.Registrar.Error.createf registrar context ~white_list
         "Attribute `%s' was not used" name;
     ]
   else []
 
-let check_unused_fold =
+let collect_unused_attributes_errors =
   object (self)
-    inherit [extension list] Ast_traverse.fold as super
+    inherit [Location.Error.t list] Ast_traverse.fold as super
 
     method! attribute { attr_name = name; _ } _ =
       [
-        Location.error_extensionf ~loc:name.loc
+        Location.Error.createf ~loc:name.loc
           "attribute not expected here, Ppxlib.Attribute needs updating!";
       ]
 
-    method private check_node : type a. a Context.t -> a -> a * extension list =
+    method private check_node : type a.
+        a Context.t -> a -> a * Location.Error.t list =
       fun context node ->
         let attrs = Context.get_attributes context node in
         match attrs with
@@ -620,7 +621,7 @@ let check_unused_fold =
                    ->
                   let collected_errors =
                     self#payload payload []
-                    @ check_attribute_fold registrar (On_item context) name
+                    @ collect_attribute_errors registrar (On_item context) name
                   in
                   (* If we allow the attribute to pass through, mark it as seen *)
                   mark_as_seen attr;
@@ -630,7 +631,7 @@ let check_unused_fold =
             (Context.set_attributes context node [], errors)
 
     method private check_floating : type a.
-        a Floating.Context.t -> a -> a * extension list =
+        a Floating.Context.t -> a -> a * Location.Error.t list =
       fun context node ->
         match
           Floating.Context.get_attribute_if_is_floating_node context node
@@ -639,7 +640,7 @@ let check_unused_fold =
         | Some ({ attr_name = name; attr_payload = payload; _ } as attr) ->
             let collected_errors =
               self#payload payload []
-              @ check_attribute_fold registrar (Floating context) name
+              @ collect_attribute_errors registrar (Floating context) name
             in
             mark_as_seen attr;
             (Floating.Context.replace_by_dummy context node, collected_errors)
@@ -798,7 +799,7 @@ let check_all_seen () =
   let fail name loc acc =
     let txt = name.txt in
     if not (Name.ignore_checks txt) then
-      Location.error_extensionf ~loc "Attribute `%s' was silently dropped" txt
+      Location.Error.createf ~loc "Attribute `%s' was silently dropped" txt
       :: acc
     else acc
   in

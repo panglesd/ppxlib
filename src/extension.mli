@@ -149,7 +149,7 @@ module Expert : sig
 end
 
 val check_unused : Ast_traverse.iter
-val check_unused_fold : extension list Ast_traverse.fold
+val collect_unhandled_extension_errors : Location.Error.t list Ast_traverse.fold
 
 module V2 : sig
   type nonrec t = t
