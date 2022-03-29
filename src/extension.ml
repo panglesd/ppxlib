@@ -363,11 +363,6 @@ let unhandled_extension_error ctx (name, _) =
     ]
   else []
 
-let fail ctx n =
-  match unhandled_extension_error ctx n with
-  | err :: _ -> Location.Error.raise err
-  | [] -> ()
-
 let collect_unhandled_extension_errors =
   object
     inherit [Location.Error.t list] Ast_traverse.fold as super
@@ -440,7 +435,7 @@ let collect_unhandled_extension_errors =
 
 let check_unused =
   object
-    inherit Ast_traverse.iter as super
+    inherit Ast_traverse.iter
 
     method! extension (name, _) =
       Location.raise_errorf ~loc:name.loc
