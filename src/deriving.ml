@@ -223,10 +223,9 @@ module Generator = struct
     let l1, lerr =
       List.partition_map ~f:(function Ok e -> Left e | Error e -> Right e) l
     in
-    let lerr = List.concat lerr in
-    (* Ast_builder.Default.pstr *)
     let lerr =
-      List.map lerr ~f:(fun err -> ext_to_item ~loc:Location.none err [])
+      List.concat lerr
+      |> List.map ~f:(fun err -> ext_to_item ~loc:Location.none err [])
     in
     List.concat l1 @ lerr
 end
