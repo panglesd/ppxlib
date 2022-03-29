@@ -269,7 +269,7 @@ module Expert = struct
   let declare name ctx patt f =
     declare ~with_arg:false name ctx patt (fun ~arg:_ -> f)
 
-  let convert ts ~loc ext =
+  let convert_res ts ~loc ext =
     let open Result in
     let+ r = find ts ext in
     match r with
@@ -277,6 +277,10 @@ module Expert = struct
     | Some ({ payload = Payload_parser (pattern, f); _ }, arg) ->
         let* payload = Ast_pattern.parse_res pattern loc (snd ext) (f ~arg) in
         Some payload
+
+  let convert ts ~loc ext =
+    convert_res ts ~loc ext
+    |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
 end
 
 module M = Make (struct
@@ -289,7 +293,7 @@ type 'a expander_result = Simple of 'a | Inline of 'a list
 module For_context = struct
   type 'a t = ('a, 'a expander_result) M.t
 
-  let convert ts ~ctxt ext =
+  let convert_res ts ~ctxt ext =
     let loc = Expansion_context.Extension.extension_point_loc ctxt in
     let open Result in
     let+ found = M.find ts ext in
@@ -303,7 +307,11 @@ module For_context = struct
         | Simple x -> Some x
         | Inline _ -> failwith "Extension.convert")
 
-  let convert_inline ts ~ctxt ext =
+  let convert ts ~ctxt ext =
+    convert_res ts ~ctxt ext
+    |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
+
+  let convert_inline_res ts ~ctxt ext =
     let loc = Expansion_context.Extension.extension_point_loc ctxt in
     let open Result in
     let+ found = M.find ts ext in
@@ -314,6 +322,10 @@ module For_context = struct
           Ast_pattern.parse_res pattern loc (snd ext) (f ~ctxt ~arg)
         in
         match payload with Simple x -> Some [ x ] | Inline l -> Some l)
+
+  let convert_inline ts ~ctxt ext =
+    convert_inline_res ts ~ctxt ext
+    |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
 end
 
 type t = T : _ For_context.t -> t

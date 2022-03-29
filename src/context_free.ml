@@ -204,7 +204,7 @@ let rec map_node_rec context ts super_call loc base_ctxt x =
   match EC.get_extension context x with
   | None -> Ok (super_call base_ctxt x)
   | Some (ext, attrs) -> (
-      let+ converted = E.For_context.convert ts ~ctxt ext in
+      let+ converted = E.For_context.convert_res ts ~ctxt ext in
       match converted with
       | None -> Ok (super_call base_ctxt x)
       | Some x ->
@@ -220,7 +220,7 @@ let map_node context ts super_call loc base_ctxt x ~hook =
     match EC.get_extension context x with
     | None -> Ok (super_call base_ctxt x)
     | Some (ext, attrs) -> (
-        let+ converted = E.For_context.convert ts ~ctxt ext in
+        let+ converted = E.For_context.convert_res ts ~ctxt ext in
         match converted with
         | None -> Ok (super_call base_ctxt x)
         | Some x ->
@@ -257,7 +257,7 @@ let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
             Expansion_context.Extension.make ~extension_point_loc
               ~base:base_ctxt ()
           in
-          match E.For_context.convert_inline ts ~ctxt ext with
+          match E.For_context.convert_inline_res ts ~ctxt ext with
           | Ok None ->
               let x = super_call base_ctxt x in
               let l =
@@ -634,7 +634,9 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   Expansion_context.Extension.make ~extension_point_loc
                     ~base:base_ctxt ()
                 in
-                match E.For_context.convert_inline structure_item ~ctxt ext with
+                match
+                  E.For_context.convert_inline_res structure_item ~ctxt ext
+                with
                 | Ok None ->
                     let item = super#structure_item base_ctxt item in
                     let rest = self#structure base_ctxt rest in
@@ -768,7 +770,9 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   Expansion_context.Extension.make ~extension_point_loc
                     ~base:base_ctxt ()
                 in
-                match E.For_context.convert_inline signature_item ~ctxt ext with
+                match
+                  E.For_context.convert_inline_res signature_item ~ctxt ext
+                with
                 | Ok None ->
                     let item = super#signature_item base_ctxt item in
                     let rest = self#signature base_ctxt rest in

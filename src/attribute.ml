@@ -367,7 +367,7 @@ let consume t x =
 let remove_seen_res (type a) (context : a Context.t) packeds (x : a) =
   let open Result in
   let attrs = Context.get_attributes context x in
-  let matched =
+  let* matched =
     let rec loop acc = function
       | [] -> Ok acc
       | T t :: rest ->
@@ -383,7 +383,6 @@ let remove_seen_res (type a) (context : a Context.t) packeds (x : a) =
     in
     loop [] packeds
   in
-  let* matched = matched in
   let attrs =
     List.filter attrs ~f:(fun attr' -> not (List.memq ~set:matched attr'))
   in

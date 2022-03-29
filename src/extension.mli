@@ -99,17 +99,26 @@ module For_context : sig
 
   type 'a t
 
-  val convert :
+  val convert_res :
     'a t list ->
     ctxt:Expansion_context.Extension.t ->
     extension ->
     ('a option, Location.Error.t NonEmptyList.t) result
 
-  val convert_inline :
+  val convert :
+    'a t list -> ctxt:Expansion_context.Extension.t -> extension -> 'a option
+
+  val convert_inline_res :
     'a t list ->
     ctxt:Expansion_context.Extension.t ->
     extension ->
     ('a list option, Location.Error.t NonEmptyList.t) result
+
+  val convert_inline :
+    'a t list ->
+    ctxt:Expansion_context.Extension.t ->
+    extension ->
+    'a list option
 end
 
 val filter_by_context : 'a Context.t -> t list -> 'a For_context.t list
@@ -141,11 +150,13 @@ module Expert : sig
     (arg:Longident.t Loc.t option -> 'a) ->
     ('context, 'b) t
 
-  val convert :
+  val convert_res :
     (_, 'a) t list ->
     loc:Location.t ->
     extension ->
     ('a option, Location.Error.t NonEmptyList.t) result
+
+  val convert : (_, 'a) t list -> loc:Location.t -> extension -> 'a option
 end
 
 val check_unused : Ast_traverse.iter

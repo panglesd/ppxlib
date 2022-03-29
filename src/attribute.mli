@@ -130,11 +130,6 @@ val declare_with_name_loc :
 val name : _ t -> string
 val context : ('a, _) t -> 'a Context.t
 
-val get :
-  ('a, 'b) t -> ?mark_as_seen:bool (** default [true] *) -> 'a -> 'b option
-(** Gets the associated attribute value. Marks the attribute as seen unless
-    [mark_as_seen=false]. Raises a located error if the attribute is duplicated *)
-
 val get_res :
   ('a, 'b) t ->
   ?mark_as_seen:bool (** default [true] *) ->
@@ -143,16 +138,17 @@ val get_res :
 (** Gets the associated attribute value. Marks the attribute as seen unless
     [mark_as_seen=false]. Returns an [Error] if the attribute is duplicated *)
 
+val get :
+  ('a, 'b) t -> ?mark_as_seen:bool (** default [true] *) -> 'a -> 'b option
+(** See {!get_res}. Raises a located error if the attribute is duplicated *)
+
 val consume_res :
   ('a, 'b) t -> 'a -> (('a * 'b) option, Location.Error.t NonEmptyList.t) result
-(** [consume t x] returns the value associated to attribute [t] on [x] if
+(** [consume_res t x] returns the value associated to attribute [t] on [x] if
     present as well as [x] with [t] removed. *)
 
 val consume : ('a, 'b) t -> 'a -> ('a * 'b) option
-(** [consume t x] returns the value associated to attribute [t] on [x] if
-    present as well as [x] with [t] removed. Raising version. *)
-
-val remove_seen : 'a Context.t -> packed list -> 'a -> 'a
+(** See {!consume_res}. Raises a located exception in case of error. *)
 
 val remove_seen_res :
   'a Context.t ->
@@ -161,6 +157,9 @@ val remove_seen_res :
   ('a, Location.Error.t NonEmptyList.t) result
 (** [remove_seen x attrs] removes the set of attributes matched by elements of
     [attrs]. Only remove them if they where seen by {!get} or {!consume}. *)
+
+val remove_seen : 'a Context.t -> packed list -> 'a -> 'a
+(** See {!remove_seen_res}. Raises in case of error. *)
 
 module Floating : sig
   type ('context, 'payload) t
@@ -198,10 +197,10 @@ val explicitly_drop : Ast_traverse.iter
     object. All attributes inside will be marked as handled. *)
 
 val check_unused : Ast_traverse.iter
-(** Raise if there are unused attributes *)
+(** Raise if there are unused attributes. *)
 
 val collect_unused_attributes_errors : Location.Error.t list Ast_traverse.fold
-(** Collect all errors due to unused attributes *)
+(** Collect all errors due to unused attributes. *)
 
 val collect : Ast_traverse.iter
 (** Collect all attribute names. To be used in conjunction with
