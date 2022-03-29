@@ -32,41 +32,6 @@ let make ~loc txt ~sub =
   let sub = List.map (fun (loc, txt) -> { Astlib.Location.loc; txt }) sub in
   Astlib.Location.Error.make ~sub { loc; txt }
 
-(* let of_extension (ext : Parsetree.extension) = *)
-(*   let sub_msg_of_extension (ext : Parsetree.structure_item) = *)
-(*     match ext with *)
-(*     | { *)
-(*      pstr_desc = *)
-(*        Parsetree.Pstr_extension *)
-(*          ( ( loc, *)
-(*              Parsetree.PStr *)
-(*                [ *)
-(*                  { *)
-(*                    pstr_desc = *)
-(*                      Parsetree.Pstr_eval *)
-(*                        ( { *)
-(*                            pexp_desc = *)
-(*                              Parsetree.Pexp_constant *)
-(*                                (Parsetree.Pconst_string (str, _, _)); *)
-(*                            _; *)
-(*                          }, *)
-(*                          [] ); *)
-(*                    _; *)
-(*                  }; *)
-(*                ] ), *)
-(*            [] ); *)
-(*      pstr_loc; *)
-(*     } -> *)
-(*         (loc, str) *)
-(*     | _ -> failwith "" *)
-(*   in *)
-(*   (\* Str.extension *\) *)
-(*   (\*   (err_extension_name sub_msg.loc, PStr [ mk_string_constant sub_msg.txt ]) *\) *)
-(*   match ext with *)
-(*   | { loc; _ }, Parsetree.PStr (main_message :: str) -> ( *)
-(*       match str with [] -> make ~loc main_message ~sub:[] | _ :: _ -> _) *)
-(*   | _ -> _ *)
-
 let update_loc = Astlib.Location.Error.set_main_loc
 
 let get_location error =

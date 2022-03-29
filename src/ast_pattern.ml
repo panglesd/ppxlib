@@ -12,18 +12,10 @@ let parse_res (T f) loc ?on_error x k =
     | None -> Error (Location.Error.createf ~loc "%s expected" expected, [])
     | Some f -> Ok (f ()))
 
-(* let parse (T f) loc ?on_error x k = *)
 let parse (T f) loc ?on_error x k =
   match parse_res (T f) loc ?on_error x k with
   | Ok r -> r
   | Error (r, _) -> Location.Error.raise r
-(* try f { matched = 0 } loc x k *)
-(* with Expected (loc, expected) -> ( *)
-(*   match on_error with *)
-(*   | None -> Location.raise_errorf ~loc "%s expected" expected *)
-(*   | Some f -> f ()) *)
-(*   | Error ({ txt; loc }, PStr _) |Error ({ txt; loc }, PSig _) |Error *)
-(*                                                                   ({ txt; loc }, PTyp _) |Error ({ txt; loc }, PPat (_, _)) -> failwith "" *)
 
 module Packed = struct
   type ('a, 'b) t = T : ('a, 'b, 'c) Ast_pattern0.t * 'b -> ('a, 'c) t
