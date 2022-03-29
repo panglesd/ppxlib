@@ -446,55 +446,60 @@ let check_unused =
       Location.raise_errorf ~loc:name.loc
         "extension not expected here, Ppxlib.Extension needs updating!"
 
-    method! core_type_desc =
-      function
-      | Ptyp_extension ext -> fail Core_type ext | x -> super#core_type_desc x
+    method! core_type_desc x =
+      match collect_unhandled_extension_errors#core_type_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! pattern_desc =
-      function
-      | Ppat_extension ext -> fail Pattern ext | x -> super#pattern_desc x
+    method! pattern_desc x =
+      match collect_unhandled_extension_errors#pattern_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! expression_desc =
-      function
-      | Pexp_extension ext -> fail Expression ext | x -> super#expression_desc x
+    method! expression_desc x =
+      match collect_unhandled_extension_errors#expression_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! class_type_desc =
-      function
-      | Pcty_extension ext -> fail Class_type ext | x -> super#class_type_desc x
+    method! class_type_desc x =
+      match collect_unhandled_extension_errors#class_type_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! class_type_field_desc =
-      function
-      | Pctf_extension ext -> fail Class_type_field ext
-      | x -> super#class_type_field_desc x
+    method! class_type_field_desc x =
+      match collect_unhandled_extension_errors#class_type_field_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! class_expr_desc =
-      function
-      | Pcl_extension ext -> fail Class_expr ext | x -> super#class_expr_desc x
+    method! class_expr_desc x =
+      match collect_unhandled_extension_errors#class_expr_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! class_field_desc =
-      function
-      | Pcf_extension ext -> fail Class_field ext
-      | x -> super#class_field_desc x
+    method! class_field_desc x =
+      match collect_unhandled_extension_errors#class_field_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! module_type_desc =
-      function
-      | Pmty_extension ext -> fail Module_type ext
-      | x -> super#module_type_desc x
+    method! module_type_desc x =
+      match collect_unhandled_extension_errors#module_type_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! signature_item_desc =
-      function
-      | Psig_extension (ext, _) -> fail Signature_item ext
-      | x -> super#signature_item_desc x
+    method! signature_item_desc x =
+      match collect_unhandled_extension_errors#signature_item_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! module_expr_desc =
-      function
-      | Pmod_extension ext -> fail Module_expr ext
-      | x -> super#module_expr_desc x
+    method! module_expr_desc x =
+      match collect_unhandled_extension_errors#module_expr_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
 
-    method! structure_item_desc =
-      function
-      | Pstr_extension (ext, _) -> fail Structure_item ext
-      | x -> super#structure_item_desc x
+    method! structure_item_desc x =
+      match collect_unhandled_extension_errors#structure_item_desc x [] with
+      | [] -> ()
+      | err :: _ -> Location.Error.raise err
   end
 
 module V3 = struct
