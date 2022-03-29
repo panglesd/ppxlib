@@ -319,7 +319,7 @@ let rec get_group attr l =
   | [] -> Ok None
   | x :: l -> (
       let+ group = get_group attr l in
-      let* attr2 = Attribute.get attr x in
+      let* attr2 = Attribute.get_res attr x in
       match (attr2, group) with
       | None, None -> None
       | None, Some vals -> Some (None :: vals)
@@ -380,8 +380,8 @@ let handle_attr_inline attrs ~item ~expanded_item ~loc ~base_ctxt =
   let open Result in
   List.fold_left attrs ~init:(Ok []) ~f:(fun acc (Rule.Attr_inline.T a) ->
       let+ acc = acc in
-      let+ g1 = Attribute.get a.attribute item in
-      let+ g2 = Attribute.get a.attribute expanded_item in
+      let+ g1 = Attribute.get_res a.attribute item in
+      let+ g2 = Attribute.get_res a.attribute expanded_item in
       match (g1, g2) with
       | None, None -> Ok acc
       | None, Some _ | Some _, None -> context_free_attribute_modification ~loc

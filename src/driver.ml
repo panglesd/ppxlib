@@ -633,7 +633,7 @@ let map_structure_gen st ~tool_name ~hook ~expect_mismatch_handler ~input_name
             Extension.collect_unhandled_extension_errors#structure st []
           else []
         in
-        let not_seen_errors = Attribute.check_all_seen () in
+        let not_seen_errors = Attribute.collect_unseen_errors () in
         (if !perform_locations_check then
          let open Location_check in
          ignore
@@ -708,7 +708,7 @@ let map_signature_gen sg ~tool_name ~hook ~expect_mismatch_handler ~input_name
             Extension.collect_unhandled_extension_errors#signature sg []
           else []
         in
-        let not_seen_errors = Attribute.check_all_seen () in
+        let not_seen_errors = Attribute.collect_unseen_errors () in
         (if !perform_locations_check then
          let open Location_check in
          ignore

@@ -48,7 +48,7 @@ struct
                 (Attribute.Floating.name M.end_marker),
               [] )
       | x :: l -> (
-          match Attribute.Floating.convert [ M.end_marker ] x with
+          match Attribute.Floating.convert_res [ M.end_marker ] x with
           | Ok None -> loop (x :: acc) l
           | Ok (Some ()) -> Ok (List.rev acc, (M.get_loc x).loc_start)
           | Error e -> Error e

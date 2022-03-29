@@ -334,7 +334,7 @@ let convert ?(do_mark_as_seen = true) pattern attr =
     attr.attr_payload
     (k ~name_loc:attr.attr_name.loc)
 
-let get t ?mark_as_seen:do_mark_as_seen x =
+let get_res t ?mark_as_seen:do_mark_as_seen x =
   let open Result in
   let attrs = Context.get_attributes t.context x in
   let+ res = get_internal t attrs in
@@ -344,7 +344,11 @@ let get t ?mark_as_seen:do_mark_as_seen x =
       let* value = convert t.payload attr ?do_mark_as_seen in
       Some value
 
-let consume t x =
+let get t ?mark_as_seen:do_mark_as_seen x =
+  get_res t ?mark_as_seen:do_mark_as_seen x
+  |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
+
+let consume_res t x =
   let open Result in
   let attrs = Context.get_attributes t.context x in
   let+ res = get_internal t attrs in
@@ -356,7 +360,11 @@ let consume t x =
       let* value = convert t.payload attr in
       Some (x, value)
 
-let remove_seen (type a) (context : a Context.t) packeds (x : a) =
+let consume t x =
+  consume_res t x
+  |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
+
+let remove_seen_res (type a) (context : a Context.t) packeds (x : a) =
   let open Result in
   let attrs = Context.get_attributes context x in
   let matched =
@@ -381,14 +389,25 @@ let remove_seen (type a) (context : a Context.t) packeds (x : a) =
   in
   Context.set_attributes context x attrs
 
-let pattern t p =
+let remove_seen (type a) (context : a Context.t) packeds (x : a) =
+  remove_seen_res (context : a Context.t) packeds (x : a)
+  |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
+
+let pattern_res t p =
   let open Result in
   let f = Ast_pattern.to_func p in
   Ast_pattern.of_func (fun ctx loc x k ->
-      let* res = consume t x in
+      let* res = consume_res t x in
       match res with
       | None -> f ctx loc x (k None)
       | Some (x, v) -> f ctx loc x (k (Some v)))
+
+let pattern t p =
+  pattern_res t p |> Ast_pattern.to_func
+  |> (fun f a b c d ->
+       f a b c d
+       |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err))
+  |> Ast_pattern.of_func
 
 module Floating = struct
   module Context = Floating_context
@@ -409,7 +428,7 @@ module Floating = struct
       payload = Payload_parser (pattern, fun ~name_loc:_ -> k);
     }
 
-  let convert ts x =
+  let convert_res ts x =
     let open Result in
     match ts with
     | [] -> Ok None
@@ -431,6 +450,10 @@ module Floating = struct
                   (String.concat ~sep:", "
                      (List.map l ~f:(fun t -> Name.Pattern.name t.name))),
                 [] ))
+
+  let convert ts x =
+    convert_res ts x
+    |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
 end
 
 let check_attribute registrar context name =
@@ -795,7 +818,7 @@ let collect =
       Attribute_table.add not_seen name loc
   end
 
-let check_all_seen () =
+let collect_unseen_errors () =
   let fail name loc acc =
     let txt = name.txt in
     if not (Name.ignore_checks txt) then
@@ -804,6 +827,11 @@ let check_all_seen () =
     else acc
   in
   Attribute_table.fold fail not_seen []
+
+let check_all_seen () =
+  match collect_unseen_errors () with
+  | [] -> ()
+  | err :: _ -> Location.Error.raise err
 
 let remove_attributes_present_in table =
   object

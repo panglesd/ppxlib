@@ -131,19 +131,30 @@ val name : _ t -> string
 val context : ('a, _) t -> 'a Context.t
 
 val get :
+  ('a, 'b) t -> ?mark_as_seen:bool (** default [true] *) -> 'a -> 'b option
+(** Gets the associated attribute value. Marks the attribute as seen unless
+    [mark_as_seen=false]. Raises a located error if the attribute is duplicated *)
+
+val get_res :
   ('a, 'b) t ->
   ?mark_as_seen:bool (** default [true] *) ->
   'a ->
   ('b option, Location.Error.t NonEmptyList.t) result
 (** Gets the associated attribute value. Marks the attribute as seen unless
-    [mark_as_seen=false]. Returns an [Error] if the attribute has is duplicated*)
+    [mark_as_seen=false]. Returns an [Error] if the attribute is duplicated *)
 
-val consume :
+val consume_res :
   ('a, 'b) t -> 'a -> (('a * 'b) option, Location.Error.t NonEmptyList.t) result
 (** [consume t x] returns the value associated to attribute [t] on [x] if
     present as well as [x] with [t] removed. *)
 
-val remove_seen :
+val consume : ('a, 'b) t -> 'a -> ('a * 'b) option
+(** [consume t x] returns the value associated to attribute [t] on [x] if
+    present as well as [x] with [t] removed. Raising version. *)
+
+val remove_seen : 'a Context.t -> packed list -> 'a -> 'a
+
+val remove_seen_res :
   'a Context.t ->
   packed list ->
   'a ->
@@ -176,8 +187,10 @@ module Floating : sig
 
   val name : _ t -> string
 
-  val convert :
+  val convert_res :
     ('a, 'b) t list -> 'a -> ('b option, Location.Error.t NonEmptyList.t) result
+
+  val convert : ('a, 'b) t list -> 'a -> 'b option
 end
 
 val explicitly_drop : Ast_traverse.iter
@@ -194,7 +207,9 @@ val collect : Ast_traverse.iter
 (** Collect all attribute names. To be used in conjunction with
     {!check_all_seen}. *)
 
-val check_all_seen : unit -> Location.Error.t list
+val collect_unseen_errors : unit -> Location.Error.t list
+
+val check_all_seen : unit -> unit
 (** Check that all attributes collected by {!freshen_and_collect} have been:
 
     - matched at least once by one of: {!get}, {!consume} or {!Floating.convert}
@@ -215,6 +230,11 @@ val dropped_so_far_signature : signature -> string Loc.t list
 val reset_checks : unit -> unit
 
 val pattern :
+  ('a, 'b) t ->
+  ('a, 'c, 'd) Ast_pattern.t ->
+  ('a, 'b option -> 'c, 'd) Ast_pattern0.t
+
+val pattern_res :
   ('a, 'b) t ->
   ('a, 'c, 'd) Ast_pattern.t ->
   ( 'a,
