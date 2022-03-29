@@ -180,5 +180,14 @@ end)
 
 (*$*)
 
-let match_structure = Str.do_match
-let match_signature = Sig.do_match
+let match_structure_res = Str.do_match
+
+let match_structure ~pos ~expected ~mismatch_handler l =
+  match_structure_res ~pos ~expected ~mismatch_handler l
+  |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
+
+let match_signature_res = Sig.do_match
+
+let match_signature ~pos ~expected ~mismatch_handler l =
+  match_signature_res ~pos ~expected ~mismatch_handler l
+  |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)

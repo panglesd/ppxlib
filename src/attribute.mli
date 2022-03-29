@@ -232,7 +232,7 @@ val reset_checks : unit -> unit
 val pattern :
   ('a, 'b) t ->
   ('a, 'c, 'd) Ast_pattern.t ->
-  ('a, 'b option -> 'c, 'd) Ast_pattern0.t
+  ('a, 'b option -> 'c, 'd) Ast_pattern.t
 
 val pattern_res :
   ('a, 'b) t ->
@@ -240,4 +240,4 @@ val pattern_res :
   ( 'a,
     'b option -> 'c,
     ('d, Location.Error.t NonEmptyList.t) result )
-  Ast_pattern0.t
+  Ast_pattern.t

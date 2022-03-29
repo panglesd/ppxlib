@@ -104,23 +104,28 @@ module Context = struct
     | Ppx_import, type_decl -> get_ppx_import_extension type_decl
     | _ -> None
 
-  let ext_item_from_context : type a. a t -> extension -> a =
-   fun t ext ->
+  let ext_item_from_context : type a. a t -> a -> extension -> a =
+   fun t x ->
     let open Ast_builder.Default in
     let loc = Location.none in
     match t with
-    | Class_expr -> pcl_extension ~loc ext
-    | Class_field -> pcf_extension ~loc ext
-    | Class_type_field -> pctf_extension ~loc ext
-    | Class_type -> pcty_extension ~loc ext
-    | Core_type -> ptyp_extension ~loc ext
-    | Expression -> pexp_extension ~loc ext
-    | Module_expr -> pmod_extension ~loc ext
-    | Module_type -> pmty_extension ~loc ext
-    | Pattern -> ppat_extension ~loc ext
-    | Signature_item -> psig_extension ~loc ext []
-    | Structure_item -> pstr_extension ~loc ext []
-    | Ppx_import -> failwith "todo"
+    | Class_expr -> pcl_extension ~loc
+    | Class_field -> pcf_extension ~loc
+    | Class_type_field -> pctf_extension ~loc
+    | Class_type -> pcty_extension ~loc
+    | Core_type -> ptyp_extension ~loc
+    | Expression -> pexp_extension ~loc
+    | Module_expr -> pmod_extension ~loc
+    | Module_type -> pmty_extension ~loc
+    | Pattern -> ppat_extension ~loc
+    | Signature_item -> fun ext -> psig_extension ~loc ext []
+    | Structure_item -> fun ext -> pstr_extension ~loc ext []
+    | Ppx_import ->
+        fun ext ->
+          {
+            x with
+            ptype_manifest = Some (Ast_builder.Default.ptyp_extension ~loc ext);
+          }
 
   let merge_attributes : type a. a t -> a -> attributes -> a =
    fun t x attrs ->
