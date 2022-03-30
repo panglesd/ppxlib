@@ -16,7 +16,7 @@ module Context = struct
     | Pattern : pattern t
     | Signature_item : signature_item t
     | Structure_item : structure_item t
-    | Ppx_import : type_declaration t
+    | Ppx_import : type_declaration option -> type_declaration t
 
   type packed = T : _ t -> packed
 
@@ -44,7 +44,7 @@ module Context = struct
     | Pattern -> "pattern"
     | Signature_item -> "signature item"
     | Structure_item -> "structure item"
-    | Ppx_import -> "type declaration"
+    | Ppx_import _ -> "type declaration"
 
   let eq : type a b. a t -> b t -> (a, b) equality =
    fun a b ->
@@ -60,7 +60,7 @@ module Context = struct
     | Pattern, Pattern -> Eq
     | Signature_item, Signature_item -> Eq
     | Structure_item, Structure_item -> Eq
-    | Ppx_import, Ppx_import -> Eq
+    | Ppx_import _, Ppx_import _ -> Eq
     | _ ->
         assert (Poly.( <> ) (T a) (T b));
         Ne
@@ -101,11 +101,11 @@ module Context = struct
         Some (e, a)
     | Signature_item, { psig_desc = Psig_extension (e, a); _ } -> Some (e, a)
     | Structure_item, { pstr_desc = Pstr_extension (e, a); _ } -> Some (e, a)
-    | Ppx_import, type_decl -> get_ppx_import_extension type_decl
+    | Ppx_import _, type_decl -> get_ppx_import_extension type_decl
     | _ -> None
 
-  let ext_item_from_context : type a. a t -> a -> extension -> a =
-   fun t x ->
+  let ext_item_from_context : type a. a t -> extension -> a =
+   fun t ->
     let open Ast_builder.Default in
     let loc = Location.none in
     match t with
@@ -120,12 +120,16 @@ module Context = struct
     | Pattern -> ppat_extension ~loc
     | Signature_item -> fun ext -> psig_extension ~loc ext []
     | Structure_item -> fun ext -> pstr_extension ~loc ext []
-    | Ppx_import ->
+    | Ppx_import (Some x) ->
         fun ext ->
           {
             x with
             ptype_manifest = Some (Ast_builder.Default.ptyp_extension ~loc ext);
           }
+    | Ppx_import _ ->
+        failwith
+          "Internal error: Ppxlib cannot generate an extension with Ppx_import \
+           None"
 
   let merge_attributes_res :
       type a.
@@ -150,7 +154,7 @@ module Context = struct
         match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
-    | Ppx_import -> (
+    | Ppx_import _ -> (
         match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
@@ -193,10 +197,11 @@ struct
     (* Check that there is no collisions between ppx_import and core_type
        extensions *)
     (match context with
-    | Context.Ppx_import ->
+    | Context.Ppx_import _ ->
         Name.Registrar.check_collisions registrar (Context.T Core_type) name
     | Context.Core_type ->
-        Name.Registrar.check_collisions registrar (Context.T Ppx_import) name
+        Name.Registrar.check_collisions registrar (Context.T (Ppx_import None))
+          name
     | _ -> ());
     Name.Registrar.register ~kind:`Extension registrar (Context.T context) name;
     {
@@ -514,7 +519,7 @@ let __declare_ppx_import name expand =
   (* This pattern is used to unwrap the type declaration from the payload
      assembled by [Context.get_ppx_import_extension] *)
   let pattern = Ast_pattern.(pstr (pstr_type recursive (__ ^:: nil) ^:: nil)) in
-  V3.declare name Context.Ppx_import pattern expand
+  V3.declare name (Context.Ppx_import None) pattern expand
 
 module V2 = struct
   type nonrec t = t

@@ -15,7 +15,7 @@ module Context : sig
     | Pattern : pattern t
     | Signature_item : signature_item t
     | Structure_item : structure_item t
-    | Ppx_import : type_declaration t
+    | Ppx_import : type_declaration option -> type_declaration t
         (** For ppx_import compat only, please do not use *)
 
   val class_expr : class_expr t
@@ -31,7 +31,7 @@ module Context : sig
   val structure_item : structure_item t
   val eq : 'a t -> 'b t -> ('a, 'b) equality
   val get_extension : 'a t -> 'a -> (extension * attributes) option
-  val ext_item_from_context : 'a t -> 'a -> extension -> 'a
+  val ext_item_from_context : 'a t -> extension -> 'a
   val merge_attributes : 'a t -> 'a -> attributes -> 'a
 
   val merge_attributes_res :
