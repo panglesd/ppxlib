@@ -31,7 +31,7 @@ module Context : sig
   val structure_item : structure_item t
   val eq : 'a t -> 'b t -> ('a, 'b) equality
   val get_extension : 'a t -> 'a -> (extension * attributes) option
-  val ext_item_from_context : 'a t -> 'a -> extension -> 'a
+  val ext_item_from_context : ?x:'a -> 'a t -> extension -> 'a
   val merge_attributes : 'a t -> 'a -> attributes -> 'a
 
   val merge_attributes_res :

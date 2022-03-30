@@ -234,7 +234,7 @@ let map_node context ts super_call loc base_ctxt x ~hook =
   match res with
   | Ok e -> e
   | Error (hd_err, _) ->
-      EC.ext_item_from_context context x (Location.Error.to_extension hd_err)
+      EC.ext_item_from_context context ~x (Location.Error.to_extension hd_err)
 
 let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
     ~in_generated_code =
@@ -281,11 +281,11 @@ let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
               else
                 no_attributes_errors
                 |> List.map ~f:Location.Error.to_extension
-                |> List.map ~f:(EC.ext_item_from_context context x)
+                |> List.map ~f:(EC.ext_item_from_context context ~x)
           | Error l ->
               l
               |> NonEmptyList.map ~f:Location.Error.to_extension
-              |> NonEmptyList.map ~f:(EC.ext_item_from_context context x)
+              |> NonEmptyList.map ~f:(EC.ext_item_from_context context ~x)
               |> NonEmptyList.to_list))
 
 let map_nodes = map_nodes ~in_generated_code:false
@@ -654,14 +654,15 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                       (no_attributes_errors
                       |> List.map ~f:Location.Error.to_extension
                       |> List.map
-                           ~f:(EC.ext_item_from_context EC.Structure_item item)
+                           ~f:
+                             (EC.ext_item_from_context EC.Structure_item ~x:item)
                       )
                       @ loop rest ~in_generated_code
                 | Error err ->
                     (err
                     |> NonEmptyList.map ~f:Location.Error.to_extension
                     |> NonEmptyList.map
-                         ~f:(EC.ext_item_from_context EC.Structure_item item)
+                         ~f:(EC.ext_item_from_context EC.Structure_item ~x:item)
                     |> NonEmptyList.to_list)
                     @ loop rest ~in_generated_code)
             | _ -> (
@@ -790,14 +791,15 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                       (no_attributes_errors
                       |> List.map ~f:Location.Error.to_extension
                       |> List.map
-                           ~f:(EC.ext_item_from_context EC.Signature_item item)
+                           ~f:
+                             (EC.ext_item_from_context EC.Signature_item ~x:item)
                       )
                       @ loop rest ~in_generated_code
                 | Error err ->
                     (err
                     |> NonEmptyList.map ~f:Location.Error.to_extension
                     |> NonEmptyList.map
-                         ~f:(EC.ext_item_from_context EC.Signature_item item)
+                         ~f:(EC.ext_item_from_context EC.Signature_item ~x:item)
                     |> NonEmptyList.to_list)
                     @ loop rest ~in_generated_code)
             | _ -> (
