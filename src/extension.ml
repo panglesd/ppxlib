@@ -416,6 +416,10 @@ let collect_unhandled_extension_errors =
       | x -> super#structure_item_desc x acc
   end
 
+let error_list_to_exception = function
+  | [] -> ()
+  | err :: _ -> Location.Error.raise err
+
 let check_unused =
   object
     inherit Ast_traverse.iter
@@ -425,59 +429,48 @@ let check_unused =
         "extension not expected here, Ppxlib.Extension needs updating!"
 
     method! core_type_desc x =
-      match collect_unhandled_extension_errors#core_type_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#core_type_desc x []
+      |> error_list_to_exception
 
     method! pattern_desc x =
-      match collect_unhandled_extension_errors#pattern_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#pattern_desc x []
+      |> error_list_to_exception
 
     method! expression_desc x =
-      match collect_unhandled_extension_errors#expression_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#expression_desc x []
+      |> error_list_to_exception
 
     method! class_type_desc x =
-      match collect_unhandled_extension_errors#class_type_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#class_type_desc x []
+      |> error_list_to_exception
 
     method! class_type_field_desc x =
-      match collect_unhandled_extension_errors#class_type_field_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#class_type_field_desc x []
+      |> error_list_to_exception
 
     method! class_expr_desc x =
-      match collect_unhandled_extension_errors#class_expr_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#class_expr_desc x []
+      |> error_list_to_exception
 
     method! class_field_desc x =
-      match collect_unhandled_extension_errors#class_field_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#class_field_desc x []
+      |> error_list_to_exception
 
     method! module_type_desc x =
-      match collect_unhandled_extension_errors#module_type_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#module_type_desc x []
+      |> error_list_to_exception
 
     method! signature_item_desc x =
-      match collect_unhandled_extension_errors#signature_item_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#signature_item_desc x []
+      |> error_list_to_exception
 
     method! module_expr_desc x =
-      match collect_unhandled_extension_errors#module_expr_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#module_expr_desc x []
+      |> error_list_to_exception
 
     method! structure_item_desc x =
-      match collect_unhandled_extension_errors#structure_item_desc x [] with
-      | [] -> ()
-      | err :: _ -> Location.Error.raise err
+      collect_unhandled_extension_errors#structure_item_desc x []
+      |> error_list_to_exception
   end
 
 module V3 = struct
