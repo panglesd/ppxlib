@@ -127,28 +127,6 @@ module Context = struct
             ptype_manifest = Some (Ast_builder.Default.ptyp_extension ~loc ext);
           }
 
-  let merge_attributes : type a. a t -> a -> attributes -> a =
-   fun t x attrs ->
-    match t with
-    | Class_expr -> { x with pcl_attributes = x.pcl_attributes @ attrs }
-    | Class_field -> { x with pcf_attributes = x.pcf_attributes @ attrs }
-    | Class_type -> { x with pcty_attributes = x.pcty_attributes @ attrs }
-    | Class_type_field -> { x with pctf_attributes = x.pctf_attributes @ attrs }
-    | Core_type -> { x with ptyp_attributes = x.ptyp_attributes @ attrs }
-    | Expression -> { x with pexp_attributes = x.pexp_attributes @ attrs }
-    | Module_expr -> { x with pmod_attributes = x.pmod_attributes @ attrs }
-    | Module_type -> { x with pmty_attributes = x.pmty_attributes @ attrs }
-    | Pattern -> { x with ppat_attributes = x.ppat_attributes @ attrs }
-    | Signature_item ->
-        assert_no_attributes attrs;
-        x
-    | Structure_item ->
-        assert_no_attributes attrs;
-        x
-    | Ppx_import ->
-        assert_no_attributes attrs;
-        x
-
   let merge_attributes_res :
       type a.
       a t -> a -> attributes -> (a, Location.Error.t NonEmptyList.t) result =
@@ -176,6 +154,11 @@ module Context = struct
         match no_attributes_errors attrs with
         | [] -> Ok x
         | t :: q -> Error (t, q))
+
+  let merge_attributes : type a. a t -> a -> attributes -> a =
+   fun t x attrs ->
+    merge_attributes_res t x attrs
+    |> Result.handle_error ~f:(fun (err, _) -> Location.Error.raise err)
 end
 
 let registrar =
