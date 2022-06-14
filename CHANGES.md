@@ -1,6 +1,7 @@
 unreleased
 -------------------
 
+- Add code-path manipulation attributes. (#352, @ceastlund)
 
 0.27.0 (14/06/2022)
 -------------------
