@@ -478,21 +478,33 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
       map_node EC.pattern pattern super#pattern x.ppat_loc base_ctxt x
 
     method! expression base_ctxt e =
-      let base_ctxt, e =
-        (* Make sure code-path attribute is applied before expanding. *)
-        match Attribute.get Ast_traverse.enter_value e with
-        | None -> (base_ctxt, e)
-        | Some { loc; txt } ->
-            ( Expansion_context.Base.enter_value ~loc txt base_ctxt,
-              Attribute.remove_seen Expression [ T Ast_traverse.enter_value ] e
-            )
-      in
       let e =
         match e.pexp_desc with
-        | Pexp_extension _ ->
-            map_node EC.expression expression
-              (fun _ e -> e)
-              e.pexp_loc base_ctxt e
+        | Pexp_extension _ -> (
+            let base_ctxt, res =
+              (* Make sure code-path attribute is applied before expanding. *)
+              match Attribute.get_res Ast_traverse.enter_value e with
+              | Error errors -> (base_ctxt, Error errors)
+              | Ok None -> (base_ctxt, Ok e)
+              | Ok (Some { loc; txt }) -> (
+                  match
+                    Attribute.remove_seen_res Expression
+                      [ T Ast_traverse.enter_value ]
+                      e
+                  with
+                  | Error errors -> (base_ctxt, Error errors)
+                  | Ok e ->
+                      ( Expansion_context.Base.enter_value ~loc txt base_ctxt,
+                        Ok e ))
+            in
+            match res with
+            | Error (hd_error, _) ->
+                EC.node_of_extension Expression ~loc:e.pexp_loc
+                  (Location.Error.to_extension hd_error)
+            | Ok e ->
+                map_node EC.expression expression
+                  (fun _ e -> e)
+                  e.pexp_loc base_ctxt e)
         | _ -> e
       in
       let expand_constant kind char text =
@@ -571,18 +583,32 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
         x
 
     method! module_expr base_ctxt x =
-      let base_ctxt, x =
-        (* Make sure code-path attribute is applied before expanding. *)
-        match Attribute.get Ast_traverse.enter_module x with
-        | None -> (base_ctxt, x)
-        | Some { loc; txt } ->
-            ( Expansion_context.Base.enter_module ~loc txt base_ctxt,
-              Attribute.remove_seen Module_expr
-                [ T Ast_traverse.enter_module ]
-                x )
+      let base_ctxt, res =
+        match x.pmod_desc with
+        | Pmod_extension _ -> (
+            (* Make sure code-path attribute is applied before expanding. *)
+            match Attribute.get_res Ast_traverse.enter_module x with
+            | Error errors -> (base_ctxt, Error errors)
+            | Ok None -> (base_ctxt, Ok x)
+            | Ok (Some { loc; txt }) -> (
+                match
+                  Attribute.remove_seen_res Module_expr
+                    [ T Ast_traverse.enter_module ]
+                    x
+                with
+                | Error errors -> (base_ctxt, Error errors)
+                | Ok e ->
+                    ( Expansion_context.Base.enter_module ~loc txt base_ctxt,
+                      Ok e )))
+        | _ -> (base_ctxt, Ok x)
       in
-      map_node EC.module_expr module_expr super#module_expr x.pmod_loc base_ctxt
-        x
+      match res with
+      | Error (hd_error, _) ->
+          EC.node_of_extension Module_expr ~loc:x.pmod_loc
+            (Location.Error.to_extension hd_error)
+      | Ok x ->
+          map_node EC.module_expr module_expr super#module_expr x.pmod_loc
+            base_ctxt x
 
     method! structure_item base_ctxt x =
       map_node EC.structure_item structure_item super#structure_item x.pstr_loc
