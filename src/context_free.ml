@@ -196,60 +196,62 @@ module Generated_code_hook = struct
     | _ -> t.f context { loc with loc_start = loc.loc_end } x
 end
 
-let rec map_node_rec context ts super_call loc base_ctxt x =
+let rec map_node_rec context ts super_call loc base_ctxt x errors =
   let open Result in
   let ctxt =
     Expansion_context.Extension.make ~extension_point_loc:loc ~base:base_ctxt ()
   in
   match EC.get_extension context x with
-  | None -> Ok (super_call base_ctxt x)
+  | None -> Ok (super_call base_ctxt x errors)
   | Some (ext, attrs) -> (
       E.For_context.convert_res ts ~ctxt ext >>= fun converted ->
       match converted with
-      | None -> Ok (super_call base_ctxt x)
+      | None -> Ok (super_call base_ctxt x errors)
       | Some x ->
           EC.merge_attributes_res context x attrs >>= fun x ->
-          map_node_rec context ts super_call loc base_ctxt x)
+          map_node_rec context ts super_call loc base_ctxt x errors)
 
-let map_node context ts super_call loc base_ctxt x ~hook =
+let map_node context ts super_call loc base_ctxt x ~hook errors =
   let open Result in
   let ctxt =
     Expansion_context.Extension.make ~extension_point_loc:loc ~base:base_ctxt ()
   in
   let res =
     match EC.get_extension context x with
-    | None -> Ok (super_call base_ctxt x)
+    | None -> Ok (super_call base_ctxt x errors)
     | Some (ext, attrs) -> (
         E.For_context.convert_res ts ~ctxt ext >>= fun converted ->
         match converted with
-        | None -> Ok (super_call base_ctxt x)
+        | None -> Ok (super_call base_ctxt x errors)
         | Some x ->
             map_node_rec context ts super_call loc base_ctxt
               (EC.merge_attributes context x attrs)
-            >>| fun generated_code ->
+              errors
+            >>| fun (generated_code, errors) ->
             Generated_code_hook.replace hook context loc (Single generated_code);
-            generated_code)
+            (generated_code, errors))
   in
   match res with
   | Ok e -> e
   | Error (hd_err, _) ->
-      EC.node_of_extension context ~x (Location.Error.to_extension hd_err)
+      ( EC.node_of_extension context ~x (Location.Error.to_extension hd_err),
+        errors )
 
 let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
-    ~in_generated_code =
+    ~in_generated_code errors =
   match l with
-  | [] -> []
+  | [] -> ([], errors)
   | x :: l -> (
       match EC.get_extension context x with
       | None ->
           (* These two lets force the evaluation order, so that errors are reported in the
              same order as they appear in the source file. *)
-          let x = super_call base_ctxt x in
-          let l =
+          let x, errors = super_call base_ctxt x errors in
+          let l, errors =
             map_nodes context ts super_call get_loc base_ctxt l ~hook
-              ~in_generated_code
+              ~in_generated_code errors
           in
-          x :: l
+          (x :: l, errors)
       | Some (ext, attrs) -> (
           let extension_point_loc = get_loc x in
           let ctxt =
@@ -258,34 +260,38 @@ let rec map_nodes context ts super_call get_loc base_ctxt l ~hook
           in
           match E.For_context.convert_inline_res ts ~ctxt ext with
           | Ok None ->
-              let x = super_call base_ctxt x in
-              let l =
+              let x, errors = super_call base_ctxt x errors in
+              let l, errors =
                 map_nodes context ts super_call get_loc base_ctxt l ~hook
-                  ~in_generated_code
+                  ~in_generated_code errors
               in
-              x :: l
+              (x :: l, errors)
           | Ok (Some converted) ->
               let attributes_errors = attributes_errors attrs in
               if List.length attributes_errors = 0 then (
-                let generated_code =
+                let generated_code, errors =
                   map_nodes context ts super_call get_loc base_ctxt converted
-                    ~hook ~in_generated_code:true
+                    ~hook ~in_generated_code:true errors
                 in
                 if not in_generated_code then
                   Generated_code_hook.replace hook context extension_point_loc
                     (Many generated_code);
-                generated_code
-                @ map_nodes context ts super_call get_loc base_ctxt l ~hook
-                    ~in_generated_code)
+                let nodes, errors =
+                  map_nodes context ts super_call get_loc base_ctxt l ~hook
+                    ~in_generated_code errors
+                in
+                (generated_code @ nodes, errors))
               else
-                attributes_errors
-                |> List.map ~f:Location.Error.to_extension
-                |> List.map ~f:(EC.node_of_extension context ~x)
+                ( attributes_errors
+                  |> List.map ~f:Location.Error.to_extension
+                  |> List.map ~f:(EC.node_of_extension context ~x),
+                  errors )
           | Error l ->
-              l
-              |> NonEmptyList.map ~f:Location.Error.to_extension
-              |> NonEmptyList.map ~f:(EC.node_of_extension context ~x)
-              |> NonEmptyList.to_list))
+              ( l
+                |> NonEmptyList.map ~f:Location.Error.to_extension
+                |> NonEmptyList.map ~f:(EC.node_of_extension context ~x)
+                |> NonEmptyList.to_list,
+                errors )))
 
 let map_nodes = map_nodes ~in_generated_code:false
 
@@ -400,7 +406,7 @@ module Expect_mismatch_handler = struct
   let nop = { f = (fun _ _ _ -> ()) }
 end
 
-class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
+class fold_map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
   ?(generated_code_hook = Generated_code_hook.nop) rules =
   let hook = generated_code_hook in
 
@@ -466,184 +472,180 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
   let map_nodes = map_nodes ~hook in
 
   object (self)
-    inherit Ast_traverse.map_with_expansion_context as super
+    inherit Ast_traverse.fold_map_with_expansion_context as super
 
     (* No point recursing into every location *)
-    method! location _ x = x
+    method! location _ x errors = (x, errors)
 
-    method! core_type base_ctxt x =
+    method! core_type base_ctxt x errors =
       map_node EC.core_type core_type super#core_type x.ptyp_loc base_ctxt x
+        errors
 
-    method! pattern base_ctxt x =
-      map_node EC.pattern pattern super#pattern x.ppat_loc base_ctxt x
+    method! pattern base_ctxt x errors =
+      map_node EC.pattern pattern super#pattern x.ppat_loc base_ctxt x errors
 
-    method! expression base_ctxt e =
-      let e =
+    method! expression base_ctxt e errors =
+      (* ignore (base_ctxt, e, errors); *)
+      (* failwith "yo" *)
+      let base_ctxt, e, errors =
+        (* Make sure code-path attribute is applied before expanding. *)
+        match Attribute.get_res Ast_traverse.enter_value e with
+        | Error (err, errs) -> (base_ctxt, e, errors @ (err :: errs))
+        | Ok None -> (base_ctxt, e, errors)
+        | Ok (Some { loc; txt }) ->
+            ( Expansion_context.Base.enter_value ~loc txt base_ctxt,
+              Attribute.remove_seen Expression [ T Ast_traverse.enter_value ] e,
+              errors )
+      in
+      let e, errors =
         match e.pexp_desc with
-        | Pexp_extension _ -> (
-            let base_ctxt, res =
-              (* Make sure code-path attribute is applied before expanding. *)
-              match Attribute.get_res Ast_traverse.enter_value e with
-              | Error errors -> (base_ctxt, Error errors)
-              | Ok None -> (base_ctxt, Ok e)
-              | Ok (Some { loc; txt }) -> (
-                  match
-                    Attribute.remove_seen_res Expression
-                      [ T Ast_traverse.enter_value ]
-                      e
-                  with
-                  | Error errors -> (base_ctxt, Error errors)
-                  | Ok e ->
-                      ( Expansion_context.Base.enter_value ~loc txt base_ctxt,
-                        Ok e ))
-            in
-            match res with
-            | Error (hd_error, _) ->
-                EC.node_of_extension Expression ~loc:e.pexp_loc
-                  (Location.Error.to_extension hd_error)
-            | Ok e ->
-                map_node EC.expression expression
-                  (fun _ e -> e)
-                  e.pexp_loc base_ctxt e)
-        | _ -> e
+        | Pexp_extension _ ->
+            map_node EC.expression expression
+              (fun _ e errors -> (e, errors))
+              e.pexp_loc base_ctxt e errors
+        | _ -> (e, errors)
       in
       let expand_constant kind char text =
         match Hashtbl.find_opt constants (char, kind) with
-        | None -> super#expression base_ctxt e
-        | Some expand -> self#expression base_ctxt (expand e.pexp_loc text)
+        | None -> super#expression base_ctxt e errors
+        | Some expand ->
+            self#expression base_ctxt (expand e.pexp_loc text) errors
       in
       match e.pexp_desc with
       | Pexp_apply (({ pexp_desc = Pexp_ident id; _ } as func), args) -> (
           match Hashtbl.find_opt special_functions id.txt with
           | None ->
               self#pexp_apply_without_traversing_function base_ctxt e func args
+                errors
           | Some pattern -> (
               match pattern e with
               | None ->
                   self#pexp_apply_without_traversing_function base_ctxt e func
-                    args
-              | Some e -> self#expression base_ctxt e))
+                    args errors
+              | Some e -> self#expression base_ctxt e errors))
       | Pexp_ident id -> (
           match Hashtbl.find_opt special_functions id.txt with
-          | None -> super#expression base_ctxt e
+          | None -> super#expression base_ctxt e errors
           | Some pattern -> (
               match pattern e with
-              | None -> super#expression base_ctxt e
-              | Some e -> self#expression base_ctxt e))
+              | None -> super#expression base_ctxt e errors
+              | Some e -> self#expression base_ctxt e errors))
       | Pexp_constant (Pconst_integer (s, Some c)) ->
           expand_constant Integer c s
       | Pexp_constant (Pconst_float (s, Some c)) -> expand_constant Float c s
-      | _ -> super#expression base_ctxt e
+      | _ -> super#expression base_ctxt e errors
 
     (* Pre-conditions:
        - e.pexp_desc = Pexp_apply(func, args)
        - func.pexp_desc = Pexp_ident _
     *)
     method private pexp_apply_without_traversing_function base_ctxt e func args
-        =
+        errors =
       let { pexp_desc = _; pexp_loc; pexp_attributes; pexp_loc_stack } = e in
-      let func =
+      let func, errors =
         let { pexp_desc; pexp_loc; pexp_attributes; pexp_loc_stack } = func in
-        let pexp_attributes = self#attributes base_ctxt pexp_attributes in
-        {
-          pexp_desc;
-          pexp_loc (* location doesn't need to be traversed *);
+        let pexp_attributes, errors =
+          self#attributes base_ctxt pexp_attributes errors
+        in
+        ( {
+            pexp_desc;
+            pexp_loc (* location doesn't need to be traversed *);
+            pexp_attributes;
+            pexp_loc_stack;
+          },
+          errors )
+      in
+      let errors, args =
+        List.fold_left_map args ~init:errors ~f:(fun errors (lab, exp) ->
+            let exp, errors = self#expression base_ctxt exp errors in
+            (errors, (lab, exp)))
+      in
+      let pexp_attributes, errors =
+        self#attributes base_ctxt pexp_attributes errors
+      in
+      ( {
+          pexp_loc;
           pexp_attributes;
+          pexp_desc = Pexp_apply (func, args);
           pexp_loc_stack;
-        }
-      in
-      let args =
-        List.map args ~f:(fun (lab, exp) ->
-            (lab, self#expression base_ctxt exp))
-      in
-      let pexp_attributes = self#attributes base_ctxt pexp_attributes in
-      {
-        pexp_loc;
-        pexp_attributes;
-        pexp_desc = Pexp_apply (func, args);
-        pexp_loc_stack;
-      }
+        },
+        errors )
 
-    method! class_type base_ctxt x =
+    method! class_type base_ctxt x errors =
       map_node EC.class_type class_type super#class_type x.pcty_loc base_ctxt x
+        errors
 
-    method! class_type_field base_ctxt x =
+    method! class_type_field base_ctxt x errors =
       map_node EC.class_type_field class_type_field super#class_type_field
-        x.pctf_loc base_ctxt x
+        x.pctf_loc base_ctxt x errors
 
-    method! class_expr base_ctxt x =
+    method! class_expr base_ctxt x errors =
       map_node EC.class_expr class_expr super#class_expr x.pcl_loc base_ctxt x
+        errors
 
-    method! class_field base_ctxt x =
+    method! class_field base_ctxt x errors =
       map_node EC.class_field class_field super#class_field x.pcf_loc base_ctxt
-        x
+        x errors
 
-    method! module_type base_ctxt x =
+    method! module_type base_ctxt x errors =
       map_node EC.module_type module_type super#module_type x.pmty_loc base_ctxt
-        x
+        x errors
 
-    method! module_expr base_ctxt x =
-      let base_ctxt, res =
-        match x.pmod_desc with
-        | Pmod_extension _ -> (
-            (* Make sure code-path attribute is applied before expanding. *)
-            match Attribute.get_res Ast_traverse.enter_module x with
-            | Error errors -> (base_ctxt, Error errors)
-            | Ok None -> (base_ctxt, Ok x)
-            | Ok (Some { loc; txt }) -> (
-                match
-                  Attribute.remove_seen_res Module_expr
-                    [ T Ast_traverse.enter_module ]
-                    x
-                with
-                | Error errors -> (base_ctxt, Error errors)
-                | Ok e ->
-                    ( Expansion_context.Base.enter_module ~loc txt base_ctxt,
-                      Ok e )))
-        | _ -> (base_ctxt, Ok x)
+    method! module_expr base_ctxt x errors =
+      let base_ctxt, x, errors =
+        (* Make sure code-path attribute is applied before expanding. *)
+        match Attribute.get_res Ast_traverse.enter_module x with
+        | Error (err, errs) -> (base_ctxt, x, errors @ (err :: errs))
+        | Ok None -> (base_ctxt, x, errors)
+        | Ok (Some { loc; txt }) ->
+            ( Expansion_context.Base.enter_module ~loc txt base_ctxt,
+              Attribute.remove_seen Module_expr
+                [ T Ast_traverse.enter_module ]
+                x,
+              errors )
       in
-      match res with
-      | Error (hd_error, _) ->
-          EC.node_of_extension Module_expr ~loc:x.pmod_loc
-            (Location.Error.to_extension hd_error)
-      | Ok x ->
-          map_node EC.module_expr module_expr super#module_expr x.pmod_loc
-            base_ctxt x
+      map_node EC.module_expr module_expr super#module_expr x.pmod_loc base_ctxt
+        x errors
 
-    method! structure_item base_ctxt x =
+    method! structure_item base_ctxt x errors =
       map_node EC.structure_item structure_item super#structure_item x.pstr_loc
-        base_ctxt x
+        base_ctxt x errors
 
-    method! signature_item base_ctxt x =
+    method! signature_item base_ctxt x errors =
       map_node EC.signature_item signature_item super#signature_item x.psig_loc
-        base_ctxt x
+        base_ctxt x errors
 
-    method! class_structure base_ctxt { pcstr_self; pcstr_fields } =
-      let pcstr_self = self#pattern base_ctxt pcstr_self in
-      let pcstr_fields =
+    method! class_structure base_ctxt { pcstr_self; pcstr_fields } errors =
+      let pcstr_self, errors = self#pattern base_ctxt pcstr_self errors in
+      let pcstr_fields, errors =
         map_nodes EC.class_field class_field super#class_field
           (fun x -> x.pcf_loc)
-          base_ctxt pcstr_fields
+          base_ctxt pcstr_fields errors
       in
-      { pcstr_self; pcstr_fields }
+      ({ pcstr_self; pcstr_fields }, errors)
 
     method! type_declaration base_ctxt x =
       map_node EC.Ppx_import ppx_import super#type_declaration x.ptype_loc
         base_ctxt x
 
-    method! class_signature base_ctxt { pcsig_self; pcsig_fields } =
-      let pcsig_self = self#core_type base_ctxt pcsig_self in
-      let pcsig_fields =
+    method! class_signature base_ctxt { pcsig_self; pcsig_fields } errors =
+      let pcsig_self, errors = self#core_type base_ctxt pcsig_self errors in
+      let pcsig_fields, errors =
         map_nodes EC.class_type_field class_type_field super#class_type_field
           (fun x -> x.pctf_loc)
-          base_ctxt pcsig_fields
+          base_ctxt pcsig_fields errors
       in
-      { pcsig_self; pcsig_fields }
+      ({ pcsig_self; pcsig_fields }, errors)
 
     (* TODO: try to factorize #structure and #signature without meta-programming *)
     (*$*)
-    method! structure base_ctxt st =
+    method! structure base_ctxt st errors =
       let open Result in
+      let errors_to_items errors =
+        errors
+        |> List.map ~f:Location.Error.to_extension
+        |> List.map ~f:(EC.node_of_extension EC.Structure_item)
+      in
       let rec with_extra_items item ~extra_items ~expect_items ~rest
           ~in_generated_code =
         let extra_items =
@@ -680,9 +682,9 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   E.For_context.convert_inline_res structure_item ~ctxt ext
                 with
                 | Ok None ->
-                    let item = super#structure_item base_ctxt item in
-                    let rest = self#structure base_ctxt rest in
-                    item :: rest
+                    let item, errors = super#structure_item base_ctxt item [] in
+                    let rest, errors = self#structure base_ctxt rest errors in
+                    errors_to_items errors @ (item :: rest)
                 | Ok (Some items) ->
                     let attributes_errors = attributes_errors attrs in
                     if List.length attributes_errors = 0 then (
@@ -715,7 +717,11 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   |> NonEmptyList.to_list)
                   @ loop rest ~in_generated_code
                 in
-                let expanded_item = super#structure_item base_ctxt item in
+                let expanded_item, errors =
+                  super#structure_item base_ctxt item []
+                in
+                errors_to_items errors
+                @
                 match (item.pstr_desc, expanded_item.pstr_desc) with
                 | Pstr_type (rf, tds), Pstr_type (exp_rf, exp_tds) ->
                     (* No context-free rule can rewrite rec flags atm, this
@@ -761,14 +767,19 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                             ~expect_items ~rest ~in_generated_code)
                     |> handle_error ~f:error_of_extension
                 | _, _ ->
-                    let rest = self#structure base_ctxt rest in
-                    expanded_item :: rest))
+                    let rest, errors = self#structure base_ctxt rest [] in
+                    errors_to_items errors @ (expanded_item :: rest)))
       in
-      loop st ~in_generated_code:false
+      (errors_to_items errors @ loop st ~in_generated_code:false, [])
 
     (*$ str_to_sig _last_text_block *)
-    method! signature base_ctxt sg =
+    method! signature base_ctxt sg errors =
       let open Result in
+      let errors_to_items errors =
+        errors
+        |> List.map ~f:Location.Error.to_extension
+        |> List.map ~f:(EC.node_of_extension EC.Signature_item)
+      in
       let rec with_extra_items item ~extra_items ~expect_items ~rest
           ~in_generated_code =
         let extra_items =
@@ -805,9 +816,9 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   E.For_context.convert_inline_res signature_item ~ctxt ext
                 with
                 | Ok None ->
-                    let item = super#signature_item base_ctxt item in
-                    let rest = self#signature base_ctxt rest in
-                    item :: rest
+                    let item, errors = super#signature_item base_ctxt item [] in
+                    let rest, errors = self#signature base_ctxt rest errors in
+                    errors_to_items errors @ (item :: rest)
                 | Ok (Some items) ->
                     let attributes_errors = attributes_errors attrs in
                     if List.length attributes_errors = 0 then (
@@ -840,7 +851,11 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                   |> NonEmptyList.to_list)
                   @ loop rest ~in_generated_code
                 in
-                let expanded_item = super#signature_item base_ctxt item in
+                let expanded_item, errors =
+                  super#signature_item base_ctxt item []
+                in
+                errors_to_items errors
+                @
                 match (item.psig_desc, expanded_item.psig_desc) with
                 | Psig_type (rf, tds), Psig_type (exp_rf, exp_tds) ->
                     (* No context-free rule can rewrite rec flags atm, this
@@ -886,10 +901,10 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
                             ~expect_items ~rest ~in_generated_code)
                     |> handle_error ~f:error_of_extension
                 | _, _ ->
-                    let rest = self#signature base_ctxt rest in
-                    expanded_item :: rest))
+                    let rest, errors = self#signature base_ctxt rest [] in
+                    errors_to_items errors @ (expanded_item :: rest)))
       in
-      loop sg ~in_generated_code:false
+      (errors_to_items errors @ loop sg ~in_generated_code:false, [])
 
     (*$*)
   end
