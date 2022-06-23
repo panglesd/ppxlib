@@ -175,7 +175,7 @@ module Transform = struct
       ~input_name =
     let { rules; enclose_impl; enclose_intf; impl; intf; _ } = t in
     let map =
-      new Context_free.map_top_down
+      new Context_free.fold_map_top_down
         rules ~generated_code_hook:hook ~expect_mismatch_handler
     in
     let gen_header_and_footer context whole_loc f =
@@ -231,7 +231,10 @@ module Transform = struct
               in
               gen_header_and_footer Structure_item whole_loc (f base_ctxt)
         in
-        map#structure base_ctxt (List.concat [ attrs; header; st; footer ])
+        fst
+        @@ map#structure base_ctxt
+             (List.concat [ attrs; header; st; footer ])
+             []
       in
       match impl with None -> st | Some f -> f ctxt st
     in
@@ -255,7 +258,10 @@ module Transform = struct
               in
               gen_header_and_footer Signature_item whole_loc (f base_ctxt)
         in
-        map#signature base_ctxt (List.concat [ attrs; header; sg; footer ])
+        fst
+        @@ map#signature base_ctxt
+             (List.concat [ attrs; header; sg; footer ])
+             []
       in
       match intf with None -> sg | Some f -> f ctxt sg
     in
