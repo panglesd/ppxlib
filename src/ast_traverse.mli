@@ -66,6 +66,9 @@ class ['ctx, 'acc] fold_map_with_context :
 class map_with_path : [string] map_with_context
 class map_with_expansion_context : [Expansion_context.Base.t] map_with_context
 
+class fold_map_with_expansion_context :
+  [Expansion_context.Base.t, Location.Error.t list] fold_map_with_context
+
 val enter_value : (expression, string loc) Attribute.t
 val enter_module : (module_expr, string loc) Attribute.t
 val do_not_enter_value_binding : (value_binding, unit) Attribute.t
