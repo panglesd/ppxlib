@@ -143,13 +143,13 @@ end
 
    This means https://github.com/ocaml/ocaml/pull/477 was not complete and indeed the
    parser should be fixed. *)
-class fold_map_top_down :
+class map_top_down_with_errors :
   ?expect_mismatch_handler:
     Expect_mismatch_handler.t (* default: Expect_mismatch_handler.nop *)
   -> ?generated_code_hook:
        Generated_code_hook.t (* default: Generated_code_hook.nop *)
   -> Rule.t list
-  -> Ast_traverse.fold_map_with_expansion_context
+  -> Ast_traverse.map_with_expansion_context_and_errors
 
 class map_top_down :
   ?expect_mismatch_handler:

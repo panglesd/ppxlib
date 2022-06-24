@@ -406,7 +406,8 @@ module Expect_mismatch_handler = struct
   let nop = { f = (fun _ _ _ -> ()) }
 end
 
-class fold_map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
+class map_top_down_with_errors
+  ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
   ?(generated_code_hook = Generated_code_hook.nop) rules =
   let hook = generated_code_hook in
 
@@ -472,7 +473,7 @@ class fold_map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
   let map_nodes = map_nodes ~hook in
 
   object (self)
-    inherit Ast_traverse.fold_map_with_expansion_context as super
+    inherit Ast_traverse.map_with_expansion_context_and_errors as super
 
     (* No point recursing into every location *)
     method! location _ x errors = (x, errors)
@@ -937,7 +938,8 @@ class map_top_down ?(expect_mismatch_handler = Expect_mismatch_handler.nop)
   ?(generated_code_hook = Generated_code_hook.nop) rules =
   let ignore_errors = fst in
   let folder =
-    new fold_map_top_down ~expect_mismatch_handler ~generated_code_hook rules
+    new map_top_down_with_errors
+      ~expect_mismatch_handler ~generated_code_hook rules
   in
   object
     inherit [Expansion_context.Base.t] Ast_traverse0.map_with_context

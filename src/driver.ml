@@ -175,7 +175,7 @@ module Transform = struct
       ~input_name =
     let { rules; enclose_impl; enclose_intf; impl; intf; _ } = t in
     let map =
-      new Context_free.fold_map_top_down
+      new Context_free.map_top_down_with_errors
         rules ~generated_code_hook:hook ~expect_mismatch_handler
     in
     let gen_header_and_footer context whole_loc f =

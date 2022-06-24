@@ -95,7 +95,7 @@ let do_not_enter_let_module =
     Ast_pattern.(pstr nil)
     ()
 
-class fold_map_with_expansion_context =
+class map_with_expansion_context_and_errors =
   object (self)
     inherit
       [Expansion_context.Base.t, Location.Error.t list] fold_map_with_context as super
@@ -241,7 +241,7 @@ class fold_map_with_expansion_context =
   end
 
 class map_with_expansion_context =
-  let folder = new fold_map_with_expansion_context in
+  let folder = new map_with_expansion_context_and_errors in
   object
     inherit [Expansion_context.Base.t] map_with_context
     method! expression ctxt expr = folder#expression ctxt expr [] |> fst
