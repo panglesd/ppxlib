@@ -241,99 +241,23 @@ class fold_map_with_expansion_context =
   end
 
 class map_with_expansion_context =
-  object (self)
-    inherit [Expansion_context.Base.t] map_with_context as super
-
-    method! expression ctxt
-        ({ pexp_desc; pexp_loc; pexp_loc_stack; pexp_attributes } as expr) =
-      let ctxt =
-        match Attribute.get enter_value expr with
-        | None -> ctxt
-        | Some { loc; txt } -> Expansion_context.Base.enter_value ~loc txt ctxt
-      in
-      let ctxt = Expansion_context.Base.enter_expr ctxt in
-      let pexp_desc =
-        match pexp_desc with
-        | Pexp_letmodule (name, module_expr, body) ->
-            let name = self#loc (self#option self#string) ctxt name in
-            let module_expr =
-              let ctxt =
-                match Attribute.get do_not_enter_let_module expr with
-                | Some () -> ctxt
-                | None ->
-                    ec_enter_module_opt ~loc:module_expr.pmod_loc name.txt ctxt
-              in
-              self#module_expr ctxt module_expr
-            in
-            let body = self#expression ctxt body in
-            Pexp_letmodule (name, module_expr, body)
-        | _ -> self#expression_desc ctxt pexp_desc
-      in
-      let pexp_loc = self#location ctxt pexp_loc in
-      let pexp_loc_stack = self#list self#location ctxt pexp_loc_stack in
-      let pexp_attributes = self#attributes ctxt pexp_attributes in
-      { pexp_desc; pexp_loc; pexp_loc_stack; pexp_attributes }
-
-    method! module_expr ctxt me =
-      let ctxt =
-        match Attribute.get enter_module me with
-        | None -> ctxt
-        | Some { loc; txt } -> Expansion_context.Base.enter_module ~loc txt ctxt
-      in
-      super#module_expr ctxt me
-
-    method! module_binding ctxt mb =
-      let ctxt =
-        match Attribute.get do_not_enter_module_binding mb with
-        | Some () -> ctxt
-        | None -> ec_enter_module_opt ~loc:mb.pmb_loc mb.pmb_name.txt ctxt
-      in
-      super#module_binding ctxt mb
+  let folder = new fold_map_with_expansion_context in
+  object
+    inherit [Expansion_context.Base.t] map_with_context
+    method! expression ctxt expr = folder#expression ctxt expr [] |> fst
+    method! module_expr ctxt me = folder#module_expr ctxt me [] |> fst
+    method! module_binding ctxt mb = folder#module_binding ctxt mb [] |> fst
 
     method! module_declaration ctxt md =
-      let ctxt =
-        match Attribute.get do_not_enter_module_declaration md with
-        | Some () -> ctxt
-        | None -> ec_enter_module_opt ~loc:md.pmd_loc md.pmd_name.txt ctxt
-      in
-      super#module_declaration ctxt md
+      folder#module_declaration ctxt md [] |> fst
 
     method! module_type_declaration ctxt mtd =
-      let ctxt =
-        match Attribute.get do_not_enter_module_type_declaration mtd with
-        | Some () -> ctxt
-        | None ->
-            Expansion_context.Base.enter_module ~loc:mtd.pmtd_loc
-              mtd.pmtd_name.txt ctxt
-      in
-      super#module_type_declaration ctxt mtd
+      folder#module_type_declaration ctxt mtd [] |> fst
 
     method! value_description ctxt vd =
-      let ctxt =
-        match Attribute.get do_not_enter_value_description vd with
-        | Some () -> ctxt
-        | None ->
-            Expansion_context.Base.enter_value ~loc:vd.pval_loc vd.pval_name.txt
-              ctxt
-      in
-      super#value_description ctxt vd
+      folder#value_description ctxt vd [] |> fst
 
-    method! value_binding ctxt
-        ({ pvb_pat; pvb_expr; pvb_attributes; pvb_loc } as vb) =
-      match Attribute.get do_not_enter_value_binding vb with
-      | Some () -> super#value_binding ctxt vb
-      | None ->
-          let in_binding_ctxt =
-            match var_names_of#pattern pvb_pat [] with
-            | [] | _ :: _ :: _ -> ctxt
-            | [ var_name ] ->
-                Expansion_context.Base.enter_value ~loc:pvb_loc var_name ctxt
-          in
-          let pvb_pat = self#pattern ctxt pvb_pat in
-          let pvb_expr = self#expression in_binding_ctxt pvb_expr in
-          let pvb_attributes = self#attributes in_binding_ctxt pvb_attributes in
-          let pvb_loc = self#location ctxt pvb_loc in
-          { pvb_pat; pvb_expr; pvb_attributes; pvb_loc }
+    method! value_binding ctxt vb = folder#value_binding ctxt vb [] |> fst
   end
 
 class sexp_of =
