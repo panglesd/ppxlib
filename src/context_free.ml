@@ -666,15 +666,10 @@ class map_top_down_with_errors
     (* TODO: try to factorize #structure and #signature without meta-programming *)
     (*$*)
     method! structure base_ctxt st errors =
-      let errors_to_items errors =
-        errors
-        |> List.map ~f:Location.Error.to_extension
-        |> List.map ~f:(EC.node_of_extension EC.Structure_item)
-      in
       let rec with_extra_items item ~extra_items ~expect_items ~rest
-          ~in_generated_code =
-        let extra_items =
-          loop (rev_concat extra_items) ~in_generated_code:true
+          ~in_generated_code errors =
+        let extra_items, errors =
+          loop (rev_concat extra_items) ~in_generated_code:true errors
         in
         if not in_generated_code then
           Generated_code_hook.insert_after hook Structure_item item.pstr_loc
@@ -694,113 +689,99 @@ class map_top_down_with_errors
               | Error e -> NonEmptyList.to_list e
               | Ok () -> [])
         in
-        item :: (errors_to_items errors @ extra_items)
-      and handle_item item ~in_generated_code ~rest =
-        let errors = [] in
+        (item :: extra_items, errors)
+      and handle_item item ~in_generated_code ~rest errors =
         let loc = item.pstr_loc in
-        let res, errors =
-          match item.pstr_desc with
-          | Pstr_extension (ext, attrs) -> (
-              let extension_point_loc = item.pstr_loc in
-              let ctxt =
-                Expansion_context.Extension.make ~extension_point_loc
-                  ~base:base_ctxt ()
-              in
-              match
-                E.For_context.convert_inline_res structure_item ~ctxt ext
-              with
-              | Ok None ->
-                  let item, errors =
-                    super#structure_item base_ctxt item errors
-                  in
-                  ([ item ], errors)
-              | Ok (Some items) ->
-                  let errors = errors @ attributes_errors attrs in
-                  let items = loop items ~in_generated_code:true in
-                  if not in_generated_code then
-                    Generated_code_hook.replace hook Structure_item
-                      item.pstr_loc (Many items);
-                  (items, errors)
-              | Error err -> ([ item ], NonEmptyList.to_list err))
-          | _ -> (
-              let expanded_item, errors =
-                super#structure_item base_ctxt item errors
-              in
-              match (item.pstr_desc, expanded_item.pstr_desc) with
-              | Pstr_type (rf, tds), Pstr_type (exp_rf, exp_tds) ->
-                  (* No context-free rule can rewrite rec flags atm, this
-                     assert acts as a failsafe in case it ever changes *)
-                  assert (Poly.(rf = exp_rf));
-                  let extra_items, errors =
-                    handle_attr_group_inline attr_str_type_decls rf ~items:tds
-                      ~expanded_items:exp_tds ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_group_inline attr_str_type_decls_expect rf
-                      ~items:tds ~expanded_items:exp_tds ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Pstr_modtype mtd, Pstr_modtype exp_mtd ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_str_module_type_decls ~item:mtd
-                      ~expanded_item:exp_mtd ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_str_module_type_decls_expect
-                      ~item:mtd ~expanded_item:exp_mtd ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Pstr_typext te, Pstr_typext exp_te ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_str_type_exts ~item:te
-                      ~expanded_item:exp_te ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_str_type_exts_expect ~item:te
-                      ~expanded_item:exp_te ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Pstr_exception ec, Pstr_exception exp_ec ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_str_exceptions ~item:ec
-                      ~expanded_item:exp_ec ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_str_exceptions_expect ~item:ec
-                      ~expanded_item:exp_ec ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | _, _ -> ([ expanded_item ], errors))
-        in
-        errors_to_items errors @ res
-      and loop st ~in_generated_code =
+        match item.pstr_desc with
+        | Pstr_extension (ext, attrs) -> (
+            let extension_point_loc = item.pstr_loc in
+            let ctxt =
+              Expansion_context.Extension.make ~extension_point_loc
+                ~base:base_ctxt ()
+            in
+            match E.For_context.convert_inline_res structure_item ~ctxt ext with
+            | Ok None ->
+                let item, errors = super#structure_item base_ctxt item errors in
+                ([ item ], errors)
+            | Ok (Some items) ->
+                let errors = errors @ attributes_errors attrs in
+                let items, errors = loop items ~in_generated_code:true errors in
+                if not in_generated_code then
+                  Generated_code_hook.replace hook Structure_item item.pstr_loc
+                    (Many items);
+                (items, errors)
+            | Error err -> ([ item ], NonEmptyList.to_list err))
+        | _ -> (
+            let expanded_item, errors =
+              super#structure_item base_ctxt item errors
+            in
+            match (item.pstr_desc, expanded_item.pstr_desc) with
+            | Pstr_type (rf, tds), Pstr_type (exp_rf, exp_tds) ->
+                (* No context-free rule can rewrite rec flags atm, this
+                   assert acts as a failsafe in case it ever changes *)
+                assert (Poly.(rf = exp_rf));
+                let extra_items, errors =
+                  handle_attr_group_inline attr_str_type_decls rf ~items:tds
+                    ~expanded_items:exp_tds ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_group_inline attr_str_type_decls_expect rf
+                    ~items:tds ~expanded_items:exp_tds ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Pstr_modtype mtd, Pstr_modtype exp_mtd ->
+                let extra_items, errors =
+                  handle_attr_inline attr_str_module_type_decls ~item:mtd
+                    ~expanded_item:exp_mtd ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_str_module_type_decls_expect ~item:mtd
+                    ~expanded_item:exp_mtd ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Pstr_typext te, Pstr_typext exp_te ->
+                let extra_items, errors =
+                  handle_attr_inline attr_str_type_exts ~item:te
+                    ~expanded_item:exp_te ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_str_type_exts_expect ~item:te
+                    ~expanded_item:exp_te ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Pstr_exception ec, Pstr_exception exp_ec ->
+                let extra_items, errors =
+                  handle_attr_inline attr_str_exceptions ~item:ec
+                    ~expanded_item:exp_ec ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_str_exceptions_expect ~item:ec
+                    ~expanded_item:exp_ec ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | _, _ -> ([ expanded_item ], errors))
+      and loop st ~in_generated_code errors =
         match st with
-        | [] -> []
+        | [] -> ([], errors)
         | item :: rest ->
-            handle_item item ~rest ~in_generated_code
-            @ loop rest ~in_generated_code
+            let res, errors =
+              handle_item item ~rest ~in_generated_code errors
+            in
+            let l, errors = loop rest ~in_generated_code errors in
+            (res @ l, errors)
       in
-      (errors_to_items errors @ loop st ~in_generated_code:false, [])
+      loop st ~in_generated_code:false errors
 
     (*$ str_to_sig _last_text_block *)
     method! signature base_ctxt sg errors =
-      let errors_to_items errors =
-        errors
-        |> List.map ~f:Location.Error.to_extension
-        |> List.map ~f:(EC.node_of_extension EC.Signature_item)
-      in
       let rec with_extra_items item ~extra_items ~expect_items ~rest
-          ~in_generated_code =
-        let extra_items =
-          loop (rev_concat extra_items) ~in_generated_code:true
+          ~in_generated_code errors =
+        let extra_items, errors =
+          loop (rev_concat extra_items) ~in_generated_code:true errors
         in
         if not in_generated_code then
           Generated_code_hook.insert_after hook Signature_item item.psig_loc
@@ -820,101 +801,92 @@ class map_top_down_with_errors
               | Error e -> NonEmptyList.to_list e
               | Ok () -> [])
         in
-        item :: (errors_to_items errors @ extra_items)
-      and handle_item item ~in_generated_code ~rest =
-        let errors = [] in
+        (item :: extra_items, errors)
+      and handle_item item ~in_generated_code ~rest errors =
         let loc = item.psig_loc in
-        let res, errors =
-          match item.psig_desc with
-          | Psig_extension (ext, attrs) -> (
-              let extension_point_loc = item.psig_loc in
-              let ctxt =
-                Expansion_context.Extension.make ~extension_point_loc
-                  ~base:base_ctxt ()
-              in
-              match
-                E.For_context.convert_inline_res signature_item ~ctxt ext
-              with
-              | Ok None ->
-                  let item, errors =
-                    super#signature_item base_ctxt item errors
-                  in
-                  ([ item ], errors)
-              | Ok (Some items) ->
-                  let errors = errors @ attributes_errors attrs in
-                  let items = loop items ~in_generated_code:true in
-                  if not in_generated_code then
-                    Generated_code_hook.replace hook Signature_item
-                      item.psig_loc (Many items);
-                  (items, errors)
-              | Error err -> ([ item ], NonEmptyList.to_list err))
-          | _ -> (
-              let expanded_item, errors =
-                super#signature_item base_ctxt item errors
-              in
-              match (item.psig_desc, expanded_item.psig_desc) with
-              | Psig_type (rf, tds), Psig_type (exp_rf, exp_tds) ->
-                  (* No context-free rule can rewrite rec flags atm, this
-                     assert acts as a failsafe in case it ever changes *)
-                  assert (Poly.(rf = exp_rf));
-                  let extra_items, errors =
-                    handle_attr_group_inline attr_sig_type_decls rf ~items:tds
-                      ~expanded_items:exp_tds ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_group_inline attr_sig_type_decls_expect rf
-                      ~items:tds ~expanded_items:exp_tds ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Psig_modtype mtd, Psig_modtype exp_mtd ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_sig_module_type_decls ~item:mtd
-                      ~expanded_item:exp_mtd ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_sig_module_type_decls_expect
-                      ~item:mtd ~expanded_item:exp_mtd ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Psig_typext te, Psig_typext exp_te ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_sig_type_exts ~item:te
-                      ~expanded_item:exp_te ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_sig_type_exts_expect ~item:te
-                      ~expanded_item:exp_te ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | Psig_exception ec, Psig_exception exp_ec ->
-                  let extra_items, errors =
-                    handle_attr_inline attr_sig_exceptions ~item:ec
-                      ~expanded_item:exp_ec ~loc ~base_ctxt errors
-                  in
-                  let expect_items, errors =
-                    handle_attr_inline attr_sig_exceptions_expect ~item:ec
-                      ~expanded_item:exp_ec ~loc ~base_ctxt errors
-                  in
-                  ( with_extra_items expanded_item ~extra_items ~expect_items
-                      ~rest ~in_generated_code,
-                    errors )
-              | _, _ -> ([ expanded_item ], errors))
-        in
-        errors_to_items errors @ res
-      and loop sg ~in_generated_code =
+        match item.psig_desc with
+        | Psig_extension (ext, attrs) -> (
+            let extension_point_loc = item.psig_loc in
+            let ctxt =
+              Expansion_context.Extension.make ~extension_point_loc
+                ~base:base_ctxt ()
+            in
+            match E.For_context.convert_inline_res signature_item ~ctxt ext with
+            | Ok None ->
+                let item, errors = super#signature_item base_ctxt item errors in
+                ([ item ], errors)
+            | Ok (Some items) ->
+                let errors = errors @ attributes_errors attrs in
+                let items, errors = loop items ~in_generated_code:true errors in
+                if not in_generated_code then
+                  Generated_code_hook.replace hook Signature_item item.psig_loc
+                    (Many items);
+                (items, errors)
+            | Error err -> ([ item ], NonEmptyList.to_list err))
+        | _ -> (
+            let expanded_item, errors =
+              super#signature_item base_ctxt item errors
+            in
+            match (item.psig_desc, expanded_item.psig_desc) with
+            | Psig_type (rf, tds), Psig_type (exp_rf, exp_tds) ->
+                (* No context-free rule can rewrite rec flags atm, this
+                   assert acts as a failsafe in case it ever changes *)
+                assert (Poly.(rf = exp_rf));
+                let extra_items, errors =
+                  handle_attr_group_inline attr_sig_type_decls rf ~items:tds
+                    ~expanded_items:exp_tds ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_group_inline attr_sig_type_decls_expect rf
+                    ~items:tds ~expanded_items:exp_tds ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Psig_modtype mtd, Psig_modtype exp_mtd ->
+                let extra_items, errors =
+                  handle_attr_inline attr_sig_module_type_decls ~item:mtd
+                    ~expanded_item:exp_mtd ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_sig_module_type_decls_expect ~item:mtd
+                    ~expanded_item:exp_mtd ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Psig_typext te, Psig_typext exp_te ->
+                let extra_items, errors =
+                  handle_attr_inline attr_sig_type_exts ~item:te
+                    ~expanded_item:exp_te ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_sig_type_exts_expect ~item:te
+                    ~expanded_item:exp_te ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | Psig_exception ec, Psig_exception exp_ec ->
+                let extra_items, errors =
+                  handle_attr_inline attr_sig_exceptions ~item:ec
+                    ~expanded_item:exp_ec ~loc ~base_ctxt errors
+                in
+                let expect_items, errors =
+                  handle_attr_inline attr_sig_exceptions_expect ~item:ec
+                    ~expanded_item:exp_ec ~loc ~base_ctxt errors
+                in
+                with_extra_items expanded_item ~extra_items ~expect_items ~rest
+                  ~in_generated_code errors
+            | _, _ -> ([ expanded_item ], errors))
+      and loop sg ~in_generated_code errors =
         match sg with
-        | [] -> []
+        | [] -> ([], errors)
         | item :: rest ->
-            handle_item item ~rest ~in_generated_code
-            @ loop rest ~in_generated_code
+            let res, errors =
+              handle_item item ~rest ~in_generated_code errors
+            in
+            let l, errors = loop rest ~in_generated_code errors in
+            (res @ l, errors)
       in
-      (errors_to_items errors @ loop sg ~in_generated_code:false, [])
+      loop sg ~in_generated_code:false errors
 
     (*$*)
   end

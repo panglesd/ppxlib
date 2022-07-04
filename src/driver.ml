@@ -231,11 +231,20 @@ module Transform = struct
               in
               gen_header_and_footer Structure_item whole_loc (f base_ctxt)
         in
-        fst
-        @@ map#structure base_ctxt
-             (List.concat [ attrs; header; st; footer ])
-             []
+        let res, errors =
+          map#structure base_ctxt (List.concat [ attrs; header; st; footer ]) []
+        in
+        let errors =
+          errors
+          |> List.map ~f:Location.Error.to_extension
+          |> List.map
+               ~f:
+                 (Extension.Context.node_of_extension
+                    Extension.Context.Structure_item)
+        in
+        errors @ res
       in
+
       match impl with None -> st | Some f -> f ctxt st
     in
     let map_intf ctxt sg_with_attrs =
@@ -258,10 +267,18 @@ module Transform = struct
               in
               gen_header_and_footer Signature_item whole_loc (f base_ctxt)
         in
-        fst
-        @@ map#signature base_ctxt
-             (List.concat [ attrs; header; sg; footer ])
-             []
+        let res, errors =
+          map#signature base_ctxt (List.concat [ attrs; header; sg; footer ]) []
+        in
+        let errors =
+          errors
+          |> List.map ~f:Location.Error.to_extension
+          |> List.map
+               ~f:
+                 (Extension.Context.node_of_extension
+                    Extension.Context.Signature_item)
+        in
+        errors @ res
       in
       match intf with None -> sg | Some f -> f ctxt sg
     in
