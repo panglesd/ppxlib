@@ -101,13 +101,7 @@ class map_with_expansion_context_and_errors =
       [Expansion_context.Base.t, Location.Error.t list] fold_map_with_context as super
 
     method! expression ctxt
-        ({ pexp_desc; pexp_loc; pexp_loc_stack; pexp_attributes } as expr)
-        errors =
-      let ctxt =
-        match Attribute.get enter_value expr with
-        | None -> ctxt
-        | Some { loc; txt } -> Expansion_context.Base.enter_value ~loc txt ctxt
-      in
+        { pexp_desc; pexp_loc; pexp_loc_stack; pexp_attributes } errors =
       let ctxt = Expansion_context.Base.enter_expr ctxt in
       let pexp_desc, errors =
         match pexp_desc with
@@ -116,12 +110,6 @@ class map_with_expansion_context_and_errors =
               self#loc (self#option self#string) ctxt name errors
             in
             let module_expr, errors =
-              let ctxt =
-                match Attribute.get do_not_enter_let_module expr with
-                | Some () -> ctxt
-                | None ->
-                    ec_enter_module_opt ~loc:module_expr.pmod_loc name.txt ctxt
-              in
               self#module_expr ctxt module_expr errors
             in
             let body, errors = self#expression ctxt body errors in
