@@ -1,16 +1,16 @@
 {%html: <div style="display: flex; justify-content:space-between"><div>%}{{!"generating-code"}< Generating AST nodes}{%html: </div><div>%}{{!"ast-traversal"}Traversing the AST >}{%html: </div></div>%}
 
-{0 Destructing AST nodes}
+{0 Destructing AST Nodes}
 
 In the previous chapter, we have seen how to generate code. However, the
 transformation function should depend on its input (the payload and maybe the
 derived item), which we have to be able to inspect.
 
 Once again, directly inspecting the {{!Ppxlib.Parsetree}[Parsetree]} value that
-we get as input is not a good option: It is very big to manipulate, and can
+we get as input is not a good option because it is very big to manipulate and can
 break at every new OCaml release. For instance, let's consider the case of
 {{:https://github.com/janestreet/ppx_inline_test}[ppx_inline_test]}. We want to
-recognize and extract the name and expression only from patterns of the form:
+recognize and extract the name and expression only from the form patterns:
 
 {[
   [%%test let "name" = expr]
@@ -50,14 +50,14 @@ name and expression from it, using normal pattern matching we would have:
 ]}
 
 [ppxlib]'s solution to the verbosity and stability problem is to provide helpers
-to {e match} the AST, in a very similar way to what is does for generating AST
+to {e match} the AST, in a very similar way to what it does for generating AST
 nodes.
 
-{1 The different options}
+{1 The Different Options}
 
-In this chapter, we will often mention the similarities between matching code,
+In this chapter, we will often mention the similarities between matching code
 and generating code (from the {{!"generating-code"}previous chapter}). Indeed, the
-options provided by [ppxlib] to match on AST nodes mirror the ones for generating
+options provided by [ppxlib] to match AST nodes mirror the ones for generating
 nodes:
 
 - {{!Ppxlib.Ast_pattern}[Ast_pattern]}, the {{!Ppxlib.Ast_builder}[Ast_builder]} sibling,
@@ -67,11 +67,11 @@ nodes:
 extenders. {!Ppxlib_metaquot} is, as for generating nodes, more natural to use but also
 restricted to some cases.
 
-{1:ast_pattern_intro The [Ast_pattern] module}
+{1:ast_pattern_intro The [Ast_pattern] Module}
 
-A match is a "structural destruction" of a value into multiple subvalues, to
-continue the computation. For instance, in the example above, from the single
-variable [payload] we structurally extract two variables: [name], and [expr].
+A match is a "structural destruction" of a value into multiple subvalues to
+continue the computation. For instance, in the example above from the single
+variable [payload], we structurally extract two variables: [name] and [expr].
 
 Destruction is very similar to construction, but in reverse. Instead of using
 several values to build a bigger one, we use one big value to define smaller
@@ -84,11 +84,10 @@ destruction are close:
 ]}
 
 For the same reason, building AST nodes using {{!Ppxlib.Ast_builder}[Ast_builder]} and destructing AST
-nodes using {{!Ppxlib.Ast_pattern}[Ast_pattern]} look very similar. The difference is that in the "leaf"
-of the construction, {{!Ppxlib.Ast_builder}[Ast_builder]} uses actual values, while {{!Ppxlib.Ast_pattern}[Ast_pattern]} has
+nodes using {{!Ppxlib.Ast_pattern}[Ast_pattern]} look very similar. The difference is that in the construction "leaf," {{!Ppxlib.Ast_builder}[Ast_builder]} uses actual values, while {{!Ppxlib.Ast_pattern}[Ast_pattern]} has
 "wildcards" at the leafs.
 
-Consider the example in the introduction, matching [[%%test let "name" = expr]].
+Consider the example in the introduction matching [[%%test let "name" = expr]].
 Building such an expression with {{!Ppxlib.Ast_builder}[Ast_builder]} could look like:
 
 {[
@@ -104,8 +103,8 @@ Building such an expression with {{!Ppxlib.Ast_builder}[Ast_builder]} could look
     <abstr>
 ]}
 
-Constructing a first class pattern is almost as simple as replacing
-[Ast_builder] by [Ast_pattern], as well as replacing the base values [name] and [expr] with a
+Constructing a first-class pattern is almost as simple as replacing
+[Ast_builder] with [Ast_pattern], as well as replacing the base values [name] and [expr] with a
 capturing wildcard:
 
 {[
@@ -125,7 +124,7 @@ we added a [unit] argument to avoid
 {{:https://v2.ocaml.org/manual/polymorphism.html#ss:valuerestriction}value
 restriction} to mess with the type (that we explained right in the next section).
 
-{2 The type for patterns}
+{2 The Type for Patterns}
 
 The {{!Ppxlib.Ast_pattern.t}[Ast_pattern.t]} type reflects the fact that a pattern-match or destruction
 is taking a value, extracting other values from it, and using them to finally
@@ -135,16 +134,16 @@ means that:
 - The type of values matched by [v] is [matched]. For instance, [matched] could
   be {{!Ppxlib.Parstree.payload}[payload]}.
 - The continuation (what to do with the extracted values) has type [cont]. The
-  values extracted from the destruction are passed as argument to the
+  values extracted from the destruction are passed as an argument to the
   continuation, therefore [cont] includes information about them. For instance,
   for a pattern that captures an [int] and a [string], [cont] could be
-  [int ->  string -> structure]. The continuation is not part of [v], it will
+  [int ->  string -> structure]. The continuation is not part of [v]; it will
   be given with the value to match.
 - The result of the computation has type [res]. Note that this is additional information
   than what we have in [cont]: {{!Ppxlib.Ast_pattern.map_result}[Ast_pattern.map_result]}
-  allows to map the result of the continuation through a function! This allows to add a
-  "construction" post-processing to the continuation: a value of type
-  [(pattern, int -> int, expression) Ast_pattern.t] would contain how to extract an integer from a [pattern], and how to map a modified [int] into an [expression].
+  allows mapping the continuation result through a function! This allows users to add a
+  "construction" post-processing to the continuation. A value of type
+  [(pattern, int -> int, expression) Ast_pattern.t] would contain how to extract an integer from a [pattern] and how to map a modified [int] into an [expression].
   
 
 In the case of the example above, [destruct_payload_test] has type:
@@ -155,8 +154,8 @@ In the case of the example above, [destruct_payload_test] has type:
     <abstr>
 ]}
  as it destructs values
-of type [pattern], extracts two values respectively of type [string] and
-[expression], so the continuation has type [string -> expression -> 'a], and the
+of type [pattern] extracts two values, respectively, of type [string] and
+[expression], so the continuation has type [string -> expression -> 'a]. Then the
 result type is ['a] since no mapping on the result is made. Now that the type of {{!Ppxlib.Ast_pattern.t}[Ast_pattern.t]} is explained, the type of
 {{!Ppxlib.Ast_pattern.parse_res}[Ast_pattern.parse_res]}, the function for applying patterns, should make sense:
 
@@ -174,8 +173,7 @@ result type is ['a] since no mapping on the result is made. Now that the type of
 
 This function takes a pattern expecting values of type ['matched], continuations of
 type ['cont] and output values of type [('res, _) result] (where the error case is when the ['matched] value does not have the expected structure).
-The types of the other arguments of the
-function correspond to this understanding: the argument of type ['matched] is
+The types of the function's other arguments correspond to this understanding: the argument of type ['matched] is
 the value to match, the one of type ['cont] is the continuation, and the result
 of applying the pattern to those two values is of type ['res]!
 
@@ -201,22 +199,22 @@ Composing construction and destruction yield the identity:
 ]}
 
 While the {{!Ppxlib.Ast_pattern.parse_res}[Ast_pattern.parse_res]} function is useful to match an AST node, you
-will also need {{!Ppxlib.Ast_pattern.t}[Ast_pattern.t]} value in other contexts. For instance, it is
+will also need the {{!Ppxlib.Ast_pattern.t}[Ast_pattern.t]} value in other contexts. For instance, it is
 used when declaring extenders with {{!Ppxlib.Extension.declare}[Extension.declare]} to tell how to extract
 arguments from the payload to give them to the extender, or when parsing with {{!Ppxlib.Deriving.Args.arg}deriving arguments}.
 
-{2 Building patterns}
+{2 Building Patterns}
 
-Now that we know what patterns represent and how to use them, and have seen an
+Now that we know what these patterns represent and how to use them, and have seen an
 example in the {{!label-ast_pattern_intro}introduction} on {{!Ppxlib.Ast_pattern}[Ast_pattern]}, the
 combinators in the {{!Ppxlib.Ast_pattern}API} should be much more easily
-understandable. So, for a comprehensive list of the different value in the
-module, the reader should directly refer to the API. In this guide, however, we
-explain in more details few important values, with examples.
+understandable. So, for a comprehensive list of the different values in the
+module, the reader should directly refer to the API. In this guide; however, we
+explain in more detail a few important values with examples.
 
-{b The wildcard pattern [| x -> ]}. the simplest way to extract a value from something
+{b The wildcard pattern [| x -> ]}. The simplest way to extract a value from something
 is just to return it! In {{!Ppxlib.Ast_pattern}[Ast_pattern]}, it corresponds to the value
-{{!Ppxlib.Ast_pattern.__}[__]} (of type [('a, 'a -> 'b, 'b)]) which extract the
+{{!Ppxlib.Ast_pattern.__}[__]} (of type [('a, 'a -> 'b, 'b)]), which extract the
 value it's given: {{!Ppxlib.Ast_pattern.parse_res}matching} a value [v]
 with this pattern and a continuation [k] would simply call [k v].
 
@@ -224,19 +222,19 @@ This pattern is useful in combination with other combinators.
 
 {b The wildcard-dropping pattern [| _ -> ]}. Despite their name ressemblance,
 {{!Ppxlib.Ast_pattern.__}[__]} is very different from the OCaml pattern-match
-wildcard [_], which accept everything but {e ignores} its input. In {{!Ppxlib.Ast_pattern}[Ast_pattern]},
+wildcard [_], which accepts everything but {e ignores} its input. In {{!Ppxlib.Ast_pattern}[Ast_pattern]},
 the wildcard-dropping pattern is {{!Ppxlib.Ast_pattern.drop}[drop]}. Again, it
-is useful in conjunction with other combinators, where one need in some places
-to accept all input, but the value is not relevant.
+is useful in conjunction with other combinators, where one needs
+to accept all input in some places, but the value is not relevant.
 
 {b The [| p as name -> ] combinator}. The combinator {{!Ppxlib.Ast_pattern.as__}[as__]}
-allows passing a node to the continuation, while still extracting values from
+allows passing a node to the continuation while still extracting values from
 this node. For instance, [as__ (some __)] corresponds to the OCaml pattern-match
 [ Some n2 as n1], where the continuation is called with [k n1 n2].
 
 {b The [| (p1 | p2) -> ] combinator}. The combinator {{!Ppxlib.Ast_pattern.alt}[alt]}
-combines two patterns with the same type for extracted values into one pattern,
-by first trying to apply the first, and if it fails by applying the second one.
+combines two patterns with the same type for extracted values into one pattern
+by first trying to apply the first, and if it fails, by applying the second one.
 For instance, [alt (pair (some __) drop) (pair drop (some __))] corresponds to
 the OCaml pattern [(Some a, _) | (_, Some b)].
 
@@ -248,31 +246,30 @@ such values are {{!Ppxlib.Ast_pattern.int}[Ast_pattern.int]}, {{!Ppxlib.Ast_patt
 {b The common deconstructors}. Many usual common constructors have
 "deconstructors" in {{!Ppxlib.Ast_pattern}[Ast_pattern]}. For instance, [some __],
 [__ ^:: drop ^:: nil] corresponds to [Some a] and [a :: _ :: []] ; [pair __ __]
-corresponds to [(a,b)], ...
+corresponds to [(a,b)], etc.
 
 {b The Parsetree deconstructors}. All constructors from {{!Ppxlib.Ast_builder}[Ast_builder]} have a
 "deconstructor" in {{!Ppxlib.Ast_pattern}[Ast_pattern]} with the same name. For instance, since
 {{!Ppxlib.Ast_builder}[Ast_builder]} has a constructor {{!Ppxlib.Ast_builder.Default.pstr_eval}[Ast_builder.pstr_eval]} to build a structure
-item from a [rec_flag] and a [value_binding] list, {{!Ppxlib.Ast_pattern}[Ast_pattern]} has an equally
+item from a [rec_flag] and a [value_binding] list. {{!Ppxlib.Ast_pattern}[Ast_pattern]} has an equally
 named {{!Ppxlib.Ast_pattern.pstr_eval}[Ast_pattern.pstr_eval]} which, given a way to destruct a [rec_flag] and a
 [value_binding] list, create a destructor for structure item.
 
 {b The continuation modifiers}. Many {{!Ppxlib.Ast_pattern}[Ast_pattern]} values allow modifying the
 continuation. It can be it a map on the continuation itself, the argument to the
 continuation, or the result of the continuation. So, {{!Ppxlib.Ast_pattern.map}[Ast_pattern.map]} transforms the
-continuation itself, for instance [map ~f:Fun.flip] will switch the arguments of
+continuation itself, e.g., [map ~f:Fun.flip] will switch the arguments of
 the function. {{!Ppxlib.Ast_pattern.map1}[map<i>]} modifies the arguments to a
 continuation of arity [i]: [map2 ~f:combine] is equivalent to
 [map ~f:(fun k -> (fun x y -> k (combine x y)))]. Finally, {{!Ppxlib.Ast_pattern.map_result}[Ast_pattern.map_result]} modifies
-the result of the continuation, and [map_result ~f:ignore] would ignore the result
-of the continuation.
+the continuation's result, and [map_result ~f:ignore] would ignore the continuation's result.
 
 {1:metaquot [Metaquot]}
-{2 [Metaquot] for patterns}
+{2 [Metaquot] for Patterns}
 
-Recall that [ppxlib] provides a rewriter to generate code, explained in
+Recall that [ppxlib] provides a rewriter to generate code explained in
 {{!page-"generating-code".metaquot}the corresponding chapter}. The same PPX can
-also generate patterns, when the extension nodes are used patterns: for
+also generate patterns when the extension nodes are used patterns: for
 instance, in what follows, the extension node will be replaced by a value of {{!Ppxlib.Parsetree.expression}[expression]} type:
 
 {[
@@ -287,7 +284,7 @@ While in the following, it would be replaced by a pattern matching on values of 
     | _ -> ...
 ]}
 
-The produced pattern matches no matter what the location and attributes are. For
+The produced pattern matches regardless of location and attributes. For
 the previous example, it will produce the following pattern:
 
 {[
@@ -316,11 +313,11 @@ the previous example, it will produce the following pattern:
     }
 ]}
 
-While being less general than {{!Ppxlib.Ast_pattern}[Ast_pattern]}, this allows to write
+While being less general than {{!Ppxlib.Ast_pattern}[Ast_pattern]}, this allows users to write
 patterns in a more natural way. Due to the OCaml AST, {{!Ppxlib.Parsetree.payload}payloads} can only
-take the form of a {{!Ppxlib.Parsetree.structure}[structure]}, a {{!Ppxlib.Parsetree.signature}[signature]}, a {{!Ppxlib.Parsetree.core_type}[core type]} or a {{!Ppxlib.Parsetree.pattern}[pattern]}. We might
-want to generate pattern matching other kind of nodes, such as expressions or
-structure item for instance. The same extension nodes that [Metaquot] provides
+take the form of a {{!Ppxlib.Parsetree.structure}[structure]}, a {{!Ppxlib.Parsetree.signature}[signature]}, a {{!Ppxlib.Parsetree.core_type}[core type]}, or a {{!Ppxlib.Parsetree.pattern}[pattern]}. We might
+want to generate pattern matching for other kinds of nodes, such as expressions or
+structure item. The same extension nodes that [Metaquot] provides
 for building can be used for matching:
 
 - The [expr] extension node to match on {{!Ppxlib.Parsetree.expression}[expressions]}:
@@ -352,17 +349,17 @@ let _ =
 
 ]}
 
-{2:antiquotations Anti-quotations}
+{2:antiquotations Anti-Quotations}
 
-{{!page-"generating-code".antiquotations}Similarly} to the [expression] context, these extension nodes have a limitation: Using these extensions alone, you can't
+{{!page-"generating-code".antiquotations}Similarly} to the [expression] context, these extension nodes have a limitation: when using these extensions alone, you can't
 bind variables. [Metaquot] also solves
 this problem using anti-quotation.
-In the [pattern] context, anti-quotation is not used to insert values, but to insert
+In the [pattern] context, anti-quotation is not used to insert values but to insert
 patterns. That way you can include a wildcard or variable-binding pattern.
 
 Consider the following example, which matches expression nodes corresponding to
-the sum of three expression, starting with the constant 1, followed by anything,
-followed by anything that is bound to the [third] variable, which has type
+the sum of three expressions: starting with the constant 1, followed by anything,
+followed by anything bound to the [third] variable, which has type
 [expression]:
 
 {[
@@ -371,7 +368,7 @@ followed by anything that is bound to the [third] variable, which has type
 ]}
 
 The syntax for anti-quotation depends on the type of the node you wish to insert
-(which must also correspond to the context of the antiquotation extension node):
+(which must also correspond to the context of the anti-quotation extension node):
 
 - The extension point [e] is used to anti-quote values of type
   {{!Ppxlib.Parsetree.expression}[expression]}:
@@ -417,15 +414,15 @@ in
 do_something_with sigi2
 ]}
 
-Remark that since we are inserting patterns (and not expressions), we always use
+Remember, since we are inserting patterns (and not expressions), we always use
 patterns as payload, as in [[%e? x]].
 
 If an anti-quote extension node is in the wrong context, it won't be rewritten
 by [Metaquot]. For instance, in [fun [%expr 1 + [%p? x]] -> x] the
-anti-quote extension node for expression is put in a pattern context, and
+anti-quote extension node for the expression is put in a pattern context, and
 it won't be rewritten.
 On the contrary, you should use anti-quotes whose kind ([[%e ...]], [[%p ...]])
-match the context. E.g. you should write:
+match the context. For example, you should write:
 
 {@ocaml[
 fun [%stri let ([%p pat] : [%t type_]) = [%e expr]] ->

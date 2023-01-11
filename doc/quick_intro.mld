@@ -4,8 +4,8 @@
 
 This guide is intended at authors or future authors of PPX rewriters. If you
 don't know what a PPX is, or if you are looking for a guide intended at PPX
-users, a first read is the {{:https://ocaml.org/docs/metaprogramming}OCaml
-official guide on meta-programming}, although the beginning of this guide
+users, read the {{:https://ocaml.org/docs/metaprogramming}OCaml
+official guide on meta-programming} first, although the beginning of this guide
 may be of interest to everyone.
 
 {1 Preprocessing in OCaml}
@@ -13,44 +13,44 @@ may be of interest to everyone.
 The OCaml language does not feature a first class macro system, that is, there is
 no official part of the OCaml language that will be executed at compile time in
 order to generate or alter the source code. The preprocessing is thus left to
-external programs, written by the community, and specialized for their own
+external programs, written by the community and specialised for their own
 tasks. However, without a unification framework, the following issues would
 arise:
 
 - Difficulty in using several preprocessors, with incompatibility or composition
-  issues,
-- Duplication of code and efforts on the different preprocessors,
-- Performance loss with many phases (parsing, pretty-printing, ...) being
-  executed multiple times.
+  issues
+- Duplication of code and efforts on the different preprocessors
+- Performance loss with many phases (parsing, pretty-printing, etc.) being
+  executed multiple times
 
 {1 [ppxlib]}
 
 The goal of [ppxlib] is to provide this unifying framework. It sits in between the
-OCaml compiler and toolchain, and the PPX authors, providing an API for them.
+OCaml compiler and toolchain, and the PPX authors provide an API for them.
 One could sum up the [ppxlib] features as:
 
-- It deals with all boilerplate such as parsing the input, output the rewritten
-  output, generate an executable, ...
-- It generates a single executable for multiple transformations, dealing itself with
-  possible composition issues,
-- It integrates well with Dune and Merlin,
-- It provides a more stable API than the compiler for manipulating the AST,
-- A single PPX codebase works on every OCaml version of the AST,
+- It deals with all boilerplate, such as parsing the input, outputting the rewritten
+  output, generating an executable, etc.
+- It generates a single executable for multiple transformations and deals with
+  possible composition issues
+- It integrates well with Dune and Merlin
+- It provides a more stable API than the compiler for manipulating the AST
+- A single PPX codebase works on every OCaml version of the AST
 - It defines restricted rewriters whose semantic ensure better confidence for the
-  user and better compositional semantics,
-- It provides many helpers to pattern-match and generate AST nodes, traverse the
+  user and better compositional semantics
+- It provides many helpers to pattern-match and generate AST nodes, as well as traverse the
   AST.
 
-{1 This guide}
+{1 This Guide}
 
 This guide is separated into several parts.
 
 First, we focus on the {{!driver}driver} that performs the AST transformations:
-how it is generated, executed, and more importantly what it does exactly, from
-migrating the AST, to the different rewriting phases it goes through.
+how it is generated, executed, and more importantly, what it does exactly, from
+migrating the AST to the different rewriting phases it goes through.
 
 After that, we explain {{!"writing-ppxs"}the different kinds} of transformations
-that ppxlib supports, and how to register them to the driver. This section only
+that [ppxlib] supports, and how to register them to the driver. This section only
 describes the transformations and their properties, not how to actually
 manipulate the AST.
 
@@ -58,22 +58,22 @@ The part where we discuss how to manipulate the AST is split in three pages:
 {{!"generating-code"}generating AST nodes} to generate OCaml code,
 {{!"matching-code"}destructing AST nodes} to extract information and act
 differently depending on what is extracted, and {{!"ast-traversal"}traversing
-the AST} to use [fold], [iter] and [map] on the AST. This code-manipulation part
-explains both using the modules {{!Ppxlib.Ast_builder}[Ast_builder]}, {{!Ppxlib.Ast_pattern}[Ast_pattern]} and the [ppxlib]'s
+the AST} to use [fold], [iter], and [map] on the AST. This code-manipulation part
+explains using the modules {{!Ppxlib.Ast_builder}[Ast_builder]}, {{!Ppxlib.Ast_pattern}[Ast_pattern]}, and the [ppxlib]'s
 PPX {{!Ppxlib_metaquot}[Metaquot]}.
 
 We finally discuss several {{!"good-practices"}good practices}, such as how to
 properly report errors, how to test your PPX, or how to migrate from other PPX
-libraries such as [OMP] and [ppx_deriving].
+libraries, such as [OMP] and [ppx_deriving].
 
 We end by including some {{!"examples"}examples}, which you can also find in the
 [examples] {{:https://github.com/ocaml-ppx/ppxlib/tree/main/examples}folder} of
 [ppxlib]'s repository.
 
-{1 PPXs and [ppxlib] history}
+{1 PPXs and [ppxlib] History}
 
 The preprocessing history of OCaml started long before [ppxlib]. However, this
-section is not yet written. You can find more information in these ressources:
+section is not yet written. You can find more information in these resources:
 {{:https://lists.ocaml.org/pipermail/wg-camlp4/2013-January/000000.html}1}
 {{:https://caml.inria.fr/pub/docs/manual-camlp4/manual002.html}2}
 {{:https://camlp5.github.io/}3}

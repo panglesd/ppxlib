@@ -1,37 +1,37 @@
 {%html: <div style="display: flex; justify-content:space-between"><div>%}{{!"ast-traversal"}< Traversing the AST}{%html: </div><div>%}{{!"examples"}Examples >}{%html: </div></div>%}
 
-{0 Good practices}
+{0 Good Practices}
 
-{1 Handling errors}
+{1 Handling Errors}
 
 
 In order to give a nice user experience when reporting errors or failures in a
-ppx, it is necessary to include as much of the generated content as possible.
+PPX, it is necessary to include as much generated content as possible.
 Most IDE tools, such as Merlin, rely on the AST for their features, such as
-displaying type, jumping to definition or showing the list of errors.
+displaying type, jumping to definition, or showing the list of errors.
 
-{2 Embedding the errors in the AST}
+{2 Embedding the Errors in the AST}
 
 A common way to report an error is to throw an exception. However, this method
-interrupts the execution flow of the ppxlib driver and leaves later PPX's
-unexpanded when handing the AST over to merlin.
+interrupts the execution flow of the [ppxlib] driver and leaves later PPXs
+unexpanded when handing the AST over to Merlin.
 
 Instead, it is better to always return a valid AST, as complete as possible, but
 with "error extension nodes" at every place where successful code generation was
 impossible. Error extension nodes are special extension nodes [[%ocaml.error
-error_message]], which can be embedded into a valid AST and are interpreted
-later as errors, for instance by the compiler or Merlin. As all extension nodes,
+error_message]] that can be embedded into a valid AST and are interpreted
+later as errors, e.g., by the compiler or Merlin. As all extension nodes,
 they can be put {{:https://ocaml.org/manual/extensionnodes.html}at many places
-in the AST}, to replace for instance structure items, expressions or patterns.
+in the AST} to replace structure items, expressions, or patterns, for example.
 
-So whenever you're in doubt if to throw an exception or if to embed the error as
-an error extension node when writing a ppx rewriter, the answer is most likely:
+So whenever you're in doubt whether to throw an exception or if to embed the error as
+an error extension node when writing a PPX rewriter,
 embed the error is the way to go! And whenever you're in doubt about where
-exactly inside the AST to embed the error, a good rule of thumb is: as deep in
+exactly to embed the error inside the AST, a good ground rule is: as deep in
 the AST as possible.
 
 For instance, suppose a rewriter is supposed to define a new record type, but
-there is an error in the generation of the type of one field. In order to have
+there is an error in one field’s type generation. In order to have
 the most complete AST as output, the rewriter can still define the type and all
 of its fields, putting an extension node in place of the type of the faulty
 field:
@@ -45,11 +45,11 @@ field:
 
 [ppxlib] provides a function in its API to create error extension nodes:
 {{!Ppxlib.Location.error_extensionf}[error_extensionf]}. This function creates
-an extension node, which has then to be transformed in the right kind of node
-using functions such as for instance
+an extension node, which then must be transformed in the right kind of node
+using functions such as
 {{!Ppxlib.Ast_builder.Default.pexp_extension}[pexp_extension]}.
 
-{2 A documented example}
+{2 A Documented Example}
 
 Let us give an example. We will define a deriver on types records, which
 constructs a default value from a given type. For instance, the derivation on
@@ -58,11 +58,11 @@ the type [type t = { x:int; y: float; z: string}] would yield [let default_t =
 
 {ol
 {- It does not work on other types than records,}
-{- It only works for records containing fields of type [string], [int] or [float].}
+{- It only works for records containing fields of type [string], [int], or [float].}
 }
 
 The rewriter should warn the user about these limitations with a good error
-reporting. Let us first look at the second point. Here is the function mapping
+reporting. Let’s first look at the second point. Here is the function mapping
 the fields from the type definition to a default expression.
 
 {[
@@ -91,14 +91,14 @@ the fields from the type definition to a default expression.
 
 
 When the record definition contains several fields with types other than [int],
-[float] or [string], several error nodes are added in the AST. Moreover, the
-location of the error nodes corresponds to the definition of the record fields.
+[float], or [string], several error nodes are added in the AST. Moreover, the
+location of the error nodes corresponds to the field record's definition.
 This allows tools such as Merlin to report all errors at once, at the right
-location, resulting in a better workflow than having to recompile everytime one
+location, resulting in a better workflow than having to recompile every time an
 error is corrected to see the next one.
 
 The first limitation is that the deriver cannot work on non-record types.
-However, we decided here to derive a default value even in the case of
+However, we decided here to derive a default value, even in the case of
 non-record types, so that it does not appear as undefined in the remaining of
 the file. This impossible value consists of an error extension node.
 
@@ -131,25 +131,25 @@ the file. This impossible value consists of an error extension node.
             |> List.concat
 ]}
 
-{2 In case of panic}
+{2 In Case of Panic}
 
 In some rare cases, it might happen that a whole file rewriter is not able to
 output a meaningful AST. In this case, they might be tempted to raise a located
-error: an exception that includes the location of the error. Moreover, this has
-historically been what was suggested to do by ppxlib examples, but is now
+error: an exception that includes the error's location. Moreover, this has
+historically been what was suggested to do by [ppxlib] examples, but it is now
 discouraged in most of the cases, as it prevents Merlin features to work well.
 
-If such an exception is uncaught, the ppx driver will return with an error code
+If such an exception isn't caught, the PPX driver will return an error code,
 and the exception will be pretty-printed, including the location (that's the
-case when the driver is called by dune). When the driver is spawned with the
-[-embed-errors] or [-as-ppx] flags (that's the case when the driver is called by
-merlin), the driver will look for located error. If it catches one, it will stop
-its chain of rewriting at this point, and output an AST consisting of the
+case when Dune calls the driver). When the driver is spawned with the
+[-embed-errors] or [-as-ppx] flags (that's the case when Merlin calls the driver), 
+the driver will look for located error. If it catches one, it will stop
+its rewriting chain at this point and output an AST consisting of the
 located error followed by the last valid AST: the one passed to the raising
 rewriter.
 
-Even more in context-free rewriters, raising should be avoided, in favour of
-outputting a single error node when a finer grained reporting is not needed or
+Even more in context-free rewriters, raising should be avoided in favour of
+outputting a single error node when finer grained reporting is not needed or
 possible. As the whole context-free rewriting is done in one traverse of the
 AST, a single raise will cancel both the context-free pass and upcoming
 rewriters, and the AST prior to the context-free pass will be outputted together
@@ -158,34 +158,34 @@ with the error.
 The function provided by the API to raise located errors is
 {{!Ppxlib.Location.raise_errorf}[raise_errorf]}.
 
-{2 Migrating from raising to embedding errors}
+{2 Migrating From Raising to Embedding Errors}
 
-Lots of ppx-es exclusively use {{!Ppxlib.Location.raise_errorf}[raise_errorf]}
-to report errors, instead of the more merlin friendly way consisting of
+Lots of PPXs exclusively use {{!Ppxlib.Location.raise_errorf}[raise_errorf]}
+to report errors, instead of the more Merlin-friendly way of
 embedding errors in the AST, as described in this section.
 
-If you want to migrate such a codebase to the embedding approach, here are a few
-recipes to do that. Indeed, it might not be completely trivial, as raising can
+If you want to migrate such a codebase to the embedding approach, the rest of this section will present few
+recipes to do that. It might not be completely trivial, as raising can
 be done anywhere in the code, including in places where "embedding" would not
-make sense. What you can do is to turn your internal raising functions to
+make sense. The first thing you can do is to turn your internal raising functions to
 function returning a [result] type.
 
 The workflow for this change would look like this:
 
 {ol
-{- Search through your code all uses of {{!Ppxlib.Location.raise_errorf}[raise_errorf]}, using for instance [grep].}
-{- For each of them, turn them into function returning a [(_, extension) result] type, using {{!Ppxlib.Location.error_extensionf}[error_extensionf]} to generate the [Error].}
-{- Let the compiler or merlin tell you where you need to propagate the [result] type (most certainly using [map]s and [bind]s).}
-{- When you have propagated until a point where you can, embed the extension in case of [Error extension].}
+{- Search your code for all uses of {{!Ppxlib.Location.raise_errorf}[raise_errorf]}, using [grep], for instance.}
+{- For each of them, turn them into functions returning a [(_, extension) result] type, using {{!Ppxlib.Location.error_extensionf}[error_extensionf]} to generate the [Error].}
+{- Let the compiler or Merlin tell you where to propagate the [result] type (most certainly using [map]s and [bind]s).}
+{- When you have propagated until a point where you can embed an extension node, turn the [Error] case into an extension node and embed it.}
 }
 
 This is quite convenient, as it allows you to do a "type-driven" modification,
-using at full the static analysis of OCaml to never omit a special case, and to
+using the full static analysis of OCaml to never omit a special case and to
 confidently find the place the most deeply in the AST to embed the error.
 However, it might induce quite a lot of code modification, and exceptions are
-sometimes convenient to use, depending on the taste. In case you want to do only
-a very simple to keep using exception, catch them and turn them into extension
-points embedded in the AST, here is an example:
+sometimes convenient to use depending on your preference. In case you want to do only
+a very simple change and keep using exception, just catch them at the right place and turn them into extension
+points embedded in the AST, as in the following example:
 
 {[
 let rewrite_extension_point loc payload =
@@ -207,7 +207,7 @@ Quoting is part of producing
 {{:https://en.wikipedia.org/wiki/Hygienic_macro}hygienic} code. But before
 talking about the solution, let's introduce the problem.
 
-Say you are writing an extension rewriter, which takes an expression as payload, and would replace all identifier [id] in the expression with a similar expression, but with a printing debug:
+Say you are writing an extension rewriter, which takes an expression as payload, and would replace all identifiers [id] in the expression with a similar expression, but with a printing debug:
 
 {[
   let x = 0 in
@@ -249,7 +249,7 @@ be evaluated in some environment where [debug] has some value and type, but the
 rewriting modifies this environment and shadows the [debug] name.
 
 "Quoting" is a mechanism to prevent this problem from happenning. In [ppxlib], it
-is done through the {{!Ppxlib.Quoter}[Quoter]} module, in several steps:
+is done through the {{!Ppxlib.Quoter}[Quoter]} module in several steps:
 
 - First, create a quoter using the {{!Ppxlib.Quoter.create}[Quoter.create]} function:
 
@@ -258,7 +258,7 @@ is done through the {{!Ppxlib.Quoter}[Quoter]} module, in several steps:
   val quoter : Quoter.t = <abstr>
 ]}
 
-- Then, use {{!Ppxlib.Quoter.quote}[Quoter.quote]} to quote all the expressions that are given from the user, might rely on a context, and that you want "intact".
+- Then, use {{!Ppxlib.Quoter.quote}[Quoter.quote]} to quote all the expressions that are given from the user, might rely on a context, and that you want "intact."
 
 {[
   # let quoted_part = Quoter.quote quoter part_to_quote
@@ -277,7 +277,7 @@ If the [debug] rewriter had been written using this method, the quoting would
 have ensured that the payload is evaluated in the same context as the
 extension node!
 
-Here is an example on how to write a [debug] rewritter (with the limitation that the payload should not contain variable binding, but the code was left simple to illustrate quoting):
+Here is an example on how to write a [debug] rewriter (with the limitation that the payload should not contain variable binding, but the code was left simple to illustrate quoting):
 
 {[
 # let rewrite expr =
@@ -316,7 +316,7 @@ Here is an example on how to write a [debug] rewritter (with the limitation that
   val rewrite : expression -> expression = <fun>
 ]}
 
-With {!Ppxlib}'s current quoting mechanism, the code given in example would look like:
+With {!Ppxlib}'s current quoting mechanism, the code given in that example would look like:
 
 {[
   # Format.printf "%a\n" Pprintast.expression @@ rewrite [%expr debug + 1, y + 2] ;;
@@ -327,35 +327,35 @@ With {!Ppxlib}'s current quoting mechanism, the code given in example would look
   - : unit = ()
 ]}
 
-{1 Respecting locations}
+{1 Respecting Locations}
 
-Correctly dealing with location is essential to correctly generate OCaml code:
-they are necessary for error reporting by the compiler, but more generally for
-Merlin's features to work, such as displaying occurences, and jumping to
-definition. When called the driver is called with the [-check] and
+Correctly dealing with location is essential to correctly generate OCaml code.
+They are necessary for error reporting by the compiler, but more generally for
+Merlin's features to work, such as displaying occurrences and jumping to
+definition. When called, the driver is called with the [-check] and
 [-check-locations] flags, [ppxlib] makes it is a requirement that locations follow
 some rules in order to accept the rewriting, as it will check that some
 invariants are respected.
 
-{2 The invariants}
+{2 The Invariants}
 
 The invariants are as follows:
 
-- AST nodes are requested to be well nested wrt. locations
+- AST nodes are requested to be well-nested WRT locations
 - the locations of "sibling" AST nodes should not overlap
 
-This is required for merlin to behave properly.
+This is required for Merlin to behave properly.
 
-Indeed, for almost any query directed at merlin, it will need to inspect the
+Indeed, for almost any query directed at Merlin, it will need to inspect the
 context around the user's cursor to give an answer that makes sense. And the
-only input it has to do that is the position of the cursor in the buffer.
+only input it has to do that is the cursor’s position in the buffer.
 The handling of most queries starts by traversing the AST, using the
 locations of nodes to select the right branch. (1) is necessary to avoid
-discarding subtrees too early, (2) is used to avoid merlin making arbitrary
-choices (if you ask for the type under the cursor, and there seem to be two
-things under the cursor, merlin will need to pick one).
+discarding subtrees too early, (2) is used to avoid Merlin making arbitrary
+choices (if you ask for the type under the cursor, and there seems to be two
+things under the cursor, Merlin will need to pick one).
 
-{2 Guidelines for writing well-behaved ppxes}
+{2 Guidelines for Writing Well-Behaved PPXs}
 
 It's obviously not always (indeed rarely) possible to mint new locations
 when manipulating the AST.
@@ -363,13 +363,13 @@ when manipulating the AST.
 The intended way to deal with locations is this:
 
 - AST nodes that exist in the source should keep their original location
-- new nodes should be given a "ghost" location (i.e.
+- new nodes should be given a "ghost" location (i.e.,
   [{ some_loc with loc_ghost = true }]) to indicate that the node doesn't
   exist in the sources.
 
-Both the new check and merlin will happily traverse these ghost nodes as if
+Both the new check and Merlin will happily traverse these ghost nodes as if
 they didn't exist. Note: this comes into play when deciding which nodes are
-"siblings", for instance if your AST is:
+"siblings," for instance, if your AST is:
 
 {v
   A (B1(C, D),
@@ -380,22 +380,22 @@ but [B2] has a ghost location, then [B1], [X] and [Y] are considered
 siblings.
 
 Additionally, there is an attribute [\[@merlin.hide\]] that you can add on
-nodes to tell merlin (and the check) to ignore this node and all of its
+nodes to tell Merlin (and the check) to ignore this node and all of its
 children. Some helpers for this are provided in {{!Ppxlib.Merlin_helpers}[Merlin_helpers]}.
 
-{1 Testing your PPX}
+{1 Testing Your PPX}
 
 This section is not yet written. You can refer to {{:https://tarides.com/blog/2019-05-09-an-introduction-to-ocaml-ppx-ecosystem#testing-your-ppx}this blog post}, or contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
-{1 Integrating with Merlin}
+{1 Integrating With Merlin}
 
 This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
-{1 Migrate from OMP}
+{1 Migrate From OMP}
 
 This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
-{1 Migrate from Ppx_traverse}
+{1 Migrate From [Ppx_traverse]}
 
 This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 

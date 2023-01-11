@@ -2,17 +2,17 @@
 
 {1 Overview}
 
-This is the user manual and API for ppxlib, the core of the ppx meta-programming
-system for {{:https://ocaml.org/}OCaml} and its derivatives such as
+This is the user manual and API for [ppxlib], the core of the PPX meta-programming
+system for {{:https://ocaml.org/}OCaml} and its derivatives, such as
 {{:https://reasonml.github.io/}Reason}. For a good introduction on PPXs, what
-they are and how to use them, see the
+they are, and how to use them, see the
 {{:https://ocaml.org/docs/metaprogramming}OCaml official guide} on PPXs. This
-manual is mostly aimed at authors of ppx rewriters and contains everything one
-should know in order to write ppx rewriters.
+manual is mostly aimed at authors of PPX rewriters and contains everything one
+should know in order to write PPX rewriters.
 
 {1 Manual}
 
-The manual consists of several sections. It can be read linearly, but you can also jump directly yo your section of interest:
+The manual consists of several sections. It can be read linearly, but you can also jump directly to your section of interest:
 {ol
 {li {{!page-"quick_intro"}An introduction to [ppxlib]}}
 {li {{!page-"driver"}How [ppxlib] works internally}}
