@@ -53,7 +53,7 @@ module. In order to define rules on attributed items, we will use the
 
 {2 Extenders}
 
-An {{!driver.def_extender}extender} is characterised by several things:
+An {{!driver.def_extenders}extender} is characterised by several things:
 
 - The context on which it applies. Indeed, extension points can be used in
   many different places: expression, pattern, core type, etc., and the extender

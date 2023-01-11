@@ -132,7 +132,7 @@ output something. So, a value [v] of type [(matched, cont, res) Ast_pattern.t]
 means that:
 
 - The type of values matched by [v] is [matched]. For instance, [matched] could
-  be {{!Ppxlib.Parstree.payload}[payload]}.
+  be {{!Ppxlib.Parsetree.payload}[payload]}.
 - The continuation (what to do with the extracted values) has type [cont]. The
   values extracted from the destruction are passed as an argument to the
   continuation, therefore [cont] includes information about them. For instance,

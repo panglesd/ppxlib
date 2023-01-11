@@ -322,7 +322,7 @@ transformations registered in this phase, which are then applied in the
 alphabetical order by their name.
 
 If it is not crucial for a transformation to run before the context-free
-phase, it should be registered to the {{!"the-global-transformation-phase"}global
+phase, it should be registered to the {{!"global-transfo-phase"}global
 transformation phase}.
 
 {2:context-free-phase The Context-Free Phase}

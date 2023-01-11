@@ -136,6 +136,13 @@ module Expect_mismatch_handler : sig
   val nop : t
 end
 
+(**/**)
+
+(* TODO: a simple comment here is fine, while we would expect only docstring or (*_ *)
+   comments to be accepted. On the contrary, docstrings are *not* accepted.
+
+   This means https://github.com/ocaml/ocaml/pull/477 was not complete and indeed the
+   parser should be fixed. *)
 class map_top_down :
   ?expect_mismatch_handler:
     Expect_mismatch_handler.t (* default: Expect_mismatch_handler.nop *)
