@@ -191,7 +191,7 @@ We can finally turn the extender into a rule (using
 {[
   # let extender_rule = Context_free.Rule.extension my_extender ;;
   val extender_rule : Context_free.Rule.t = <abstr>
-  # Driver.register_transformation ~rules:[extender_rule] "rien" ;;
+  # Driver.register_transformation ~rules:[extender_rule] "name_only_for_debug_purpose" ;;
   - : unit = ()
 ]}
 
