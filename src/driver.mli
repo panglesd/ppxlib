@@ -1,3 +1,6 @@
+(** Interaction with the driver, such as getting/seeting cookies, adding
+    arguments. *)
+
 open Import
 
 val add_arg : Caml.Arg.key -> Caml.Arg.spec -> doc:string -> unit

@@ -40,7 +40,7 @@ value of type {{!Ppxlib.Parsetree.row_field_desc}[row_field_desc]}!
 Note: The OCaml compiler API also provides a module, called {{!Ppxlib.Ast_helper}[Ast_helper]}, to
 manipulate the AST.
 
-{1 The [AST_builder] Module}
+{1:ast_builder The [AST_builder] Module}
 
 {2 General Presentation}
 
@@ -136,7 +136,7 @@ that start with a [p] define a pattern, such as [pstring], [pconstruct],
 
 {2 Dealing With Locations}
 
-As explained in the {{!page-"good-practices"."respecting-locations"}dedicated section}, it is crucial
+As explained in the {{!page-"good-practices"."resp_loc"}dedicated section}, it is crucial
 to correctly deal with locations. For this, {{!Ppxlib.Ast_builder}[Ast_builder]} can be used in
 several ways, depending on the context:
 
