@@ -10,12 +10,11 @@ may be of interest to everyone.
 
 {1 Preprocessing in OCaml}
 
-The OCaml language does not feature a first class macro system, that is, there is
-no official part of the OCaml language that will be executed at compile time in
-order to generate or alter the source code. The preprocessing is thus left to
-external programs, written by the community and specialised for their own
-tasks. However, without a unification framework, the following issues would
-arise:
+OCaml doesn't have a macro system, that is, there is no official part of the
+OCaml language that will be executed at compile time in order to generate or
+alter the source code. The preprocessing is thus left to external programs,
+written by the community and specialised for their own tasks. However, without a
+unification framework, the following issues arise:
 
 - Difficulty in using several preprocessors, with incompatibility or composition
   issues
@@ -25,9 +24,10 @@ arise:
 
 {1 [ppxlib]}
 
-The goal of [ppxlib] is to provide this unifying framework. It sits in between the
-OCaml compiler and toolchain, and the PPX authors provide an API for them.
-One could sum up the [ppxlib] features as:
+The goal of [ppxlib] is to solve these problems, by providing a unifying
+framework for writing preprocessors. It sits in between the OCaml compiler and
+toolchain, and the PPX authors provide an API for them. One could sum up the
+[ppxlib] features as:
 
 - It deals with all boilerplate, such as parsing the input, outputting the rewritten
   output, generating an executable, etc.

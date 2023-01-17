@@ -38,7 +38,7 @@ structure items, expressions, patterns, etc., but it is not possible to generate
 value of type {{!Ppxlib.Parsetree.row_field_desc}[row_field_desc]}!
 
 Note: The OCaml compiler API also provides a module, called {{!Ppxlib.Ast_helper}[Ast_helper]}, to
-manipulate the AST.
+manipulate the AST. This module is in [ppxlib] for compatiblity reasons and it is recommended to use {{!Ppxlib.Ast_builder}[Ast_builder]} instead.
 
 {1:ast_builder The [AST_builder] Module}
 
