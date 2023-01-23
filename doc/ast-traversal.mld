@@ -17,6 +17,55 @@ of its subvalues, combining the result in a certain way. For instance, {{!Stdlib
 case of the long {{!Ppxlib.Parsetree}[Parsetree]} type, it is a lot of boilerplate code! Fortunately,
 {{!Ppxlib}[ppxlib]} provides a way to ease this.
 
+In [ppxlib], traversals are implemented using the "visitor" object-oriented pattern.
+
+{1 Writing Traverses}
+
+For each kind of traversal (described below), [ppxlib] provides a "default" traversal,
+in the form of a class following the visitors pattern. For instance, in the case of the map traversal, the
+default map is the identity AST map, and any object of class {{!Ppxlib.Ast_traverse.map}[Ast_traverse.map]}
+will be this identity map. To apply a map to a node of a given type, one needs
+to call the appropriate method:
+
+{[
+  # let f payload =
+      let map = new Ppxlib.Ast_traverse.map in
+      map#payload ;;
+  val f : payload -> payload = <fun>
+]}
+
+In the example above, [f] is the identity map. But we want to define proper maps,
+not just identity. This is done by creating a new class, making it inherit the
+methods, and replacing the one that we want to replace. Here is an example, for
+both the [iter] and [map] traversals:
+
+{[
+let f payload =
+  let checker =
+    object
+      inherit Ast_traverse.iter as super
+
+      method! extension ext =
+        match ext with
+        | { txt = "forbidden"; _ }, _ ->
+            failwith "Fordidden extension nodes are forbidden!"
+        | _ -> super#extension ext (* Continue traversing inside the node *)
+    end
+  in
+  let replace_constant =
+    object
+      inherit Ast_traverse.map
+      method! int i = i + 1
+    end
+  in
+  checker#payload payload;
+  replace_constant#payload payload
+]}
+
+Note that when redefining methods, unless explicitly wanting the traversal to
+stop, the original method needs to be called! That should be all that’s necessary to
+know and understand the {{!Ppxlib.Ast_traverse.map}API}.
+
 {1 The Different Kinds of Traversals}
 
 {{!Ppxlib}[ppxlib]} offers different kind of {{!Ppxlib.Parsetree}[Parsetree]} traversals:
@@ -61,51 +110,5 @@ case of the long {{!Ppxlib.Parsetree}[Parsetree]} type, it is a lot of boilerpla
           (map_with_depth_context (ctxt+1) ~f y)
 ]}
 
-{1 Writing Traverses}
-
-For each kind of traversal described above, [ppxlib] provides "default" traversal,
-in the form of a class following the visitors pattern. For instance, in the case of the map traversal, the
-default map is the identity AST map, and any object of class {{!Ppxlib.Ast_traverse.map}[Ast_traverse.map]}
-will be this identity map. To apply a map to a node of a given type, one needs
-to call the appropriate method:
-
-{[
-  # let f payload =
-      let map = new Ppxlib.Ast_traverse.map in
-      map#payload ;;
-  val f : payload -> payload = <fun>
-]}
-
-In the example above, [f] is the identity map. But we want to define proper maps,
-not just identity. This is done by creating a new class, making it inherit the
-methods, and replacing the one that we want to replace. Here is an example, for
-both the [iter] and [map] traversals:
-
-{[
-let f payload =
-  let checker =
-    object
-      inherit Ast_traverse.iter as super
-
-      method! extension ext =
-        match ext with
-        | { txt = "forbidden"; _ }, _ ->
-            failwith "Fordidden extension nodes are forbidden!"
-        | _ -> super#extension ext (* Continue traversing inside the node *)
-    end
-  in
-  let replace_constant =
-    object
-      inherit Ast_traverse.map
-      method! int i = i + 1
-    end
-  in
-  checker#payload payload;
-  replace_constant#payload payload
-]}
-
-Note that when redefining methods, unless explicitly wanting the traversal to
-stop, the original method needs to be called! That should be all that’s necessary to
-know and understand the {{!Ppxlib.Ast_traverse.map}API}.
 
 {%html: <div style="display: flex; justify-content:space-between"><div>%}{{!"matching-code"}< Destructing AST nodes}{%html: </div><div>%}{{!"good-practices"}Good practices >}{%html: </div></div>%}
