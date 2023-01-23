@@ -54,19 +54,19 @@ module. In order to define rules on attributed items, we will use the
 An {{!driver.def_extenders}extender} is characterised by several things:
 
 {ul
-{- The situation that triggers the rewriting, which consists of two things:
+{li The situation that triggers the rewriting, which consists of two things:
   {ul
-    {- The extension points' name on which it is triggered. For instance,
+    {li The extension points' name on which it is triggered. For instance,
        an extender triggered on [[%name]] would not be triggered on [[%other_name]]}
-    {- The AST context on which it applies. Indeed, extension points can be used in
+    {li The AST context on which it applies. Indeed, extension points can be used in
        many different places: expression, pattern, core type, etc., and the extender
        should be restricted to one context, as it produces code of a single type. So,
        an extender triggered on expressions could be triggered on [let x = [%name]]
        but not on [let [%name] = expr].}}}
-{- The actual rewriting of the extension node:
+{li The actual rewriting of the extension node:
   {ul
-    {- A function, called "expander", taking arguments and outputting the generated AST}}
-    {- How to extract from the payload the arguments to pass to the expander}
+    {li A function, called "expander", taking arguments and outputting the generated AST}
+    {li How to extract from the payload the arguments to pass to the expander}}
 }}
 
 {3:ext_context The Extender Context}

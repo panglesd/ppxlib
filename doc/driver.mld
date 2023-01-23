@@ -136,7 +136,7 @@ transformations. Using a single driver for multiple
 transformations from multiple PPXs ensures better composition semantics and
 improves the speed of the combined transformations.
 Moreover, [ppxlib] communicates with Dune through [.corrected] files to allow for
-promotion. Inlining rewriters generate such files, but the PPX author can
+promotion, for instance when using {{!"writing-ppxs"."inlining-transformations"}[[@@deriving_inline]]}. A PPX author can also
 generate its own promotion suggestion using the
 {{!Ppxlib.Driver.register_correction}[Driver.register_correction]} function.
 

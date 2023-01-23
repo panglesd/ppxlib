@@ -206,7 +206,7 @@ arguments from the payload to give them to the extender, or when parsing with {{
 {2 Building Patterns}
 
 Now that we know what these patterns represent and how to use them, and have seen an
-example in the {{!label-ast_pattern_intro}introduction} on {{!Ppxlib.Ast_pattern}[Ast_pattern]}, the
+example in the {{!ast_pattern_intro}introduction} on {{!Ppxlib.Ast_pattern}[Ast_pattern]}, the
 combinators in the {{!Ppxlib.Ast_pattern}API} should be much more easily
 understandable. So, for a comprehensive list of the different values in the
 module, the reader should directly refer to the API. In this guide; however, we
