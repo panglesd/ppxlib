@@ -28,8 +28,8 @@ The two main options are:
 
 {{!Ppxlib.Ast_builder}[Ast_builder]} provides an API to generate AST nodes for the latest OCaml
 version in a backward-compatible way. {!Ppxlib_metaquot} is different: it is a PPX that
-lets you generate OCaml AST nodes by writing OCaml code, using quoting and
-splicing.
+lets you generate OCaml AST nodes by writing OCaml code, using quotations and
+anti-quotations.
 
 Using {!Ppxlib_metaquot} requires less knowledge of the OCaml AST than
 {{!Ppxlib.Ast_builder}[Ast_builder]} as it only uses natural OCaml syntax;
@@ -184,7 +184,7 @@ Yet, every part of a program we write corresponds to a specific AST node, so
 there is no need for AST generation to be more difficult than that.
 
 [Metaquot] is a very useful PPX that allows users to define values of a [Parsetree]
-type by writing natural code, using the quoting and splicing mechanism of
+type by writing natural code, using the quotations and antiquotations mechanism of
 metaprogramming.
 
 Simplifying a bit, {{!Ppxlib_metaquot}[Metaquot]} rewrites an expression extension point directly
