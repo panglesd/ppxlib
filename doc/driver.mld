@@ -307,6 +307,10 @@ AST. In fact, the property of being the "first transformation applied" is what
 defines this phase, and [ppxlib] will thus ensure that only one transformation is
 registered in this phase; otherwise, it will generate an error.
 
+You should only register a transformation in this phase if it is really strongly
+necessary, and you know what you are doing. Your PPX will not be usable at the
+same time as another one registering a transformation in this phase.
+
 An example of a PPX registered in this phase is
 {{:https://github.com/thierry-martinez/metapp}metapp}.
 
