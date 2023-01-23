@@ -12,15 +12,16 @@ may be of interest to everyone.
 
 OCaml doesn't have a macro system, that is, there is no official part of the
 OCaml language that will be executed at compile time in order to generate or
-alter the source code. The preprocessing is thus left to external programs,
+alter the source code. However, OCaml does have an official part of its syntax dedicated to this: {{:https://v3.ocaml.org/manual/extensionnodes.html}extension nodes} and {{:https://v2.ocaml.org/manual/attributes.html}attributes}; both of them introduced in OCaml 4.02. The preprocessing itself, though, is left to external programs,
 written by the community and specialised for their own tasks. However, without a
 unification framework, the following issues arise:
 
-- Difficulty in using several preprocessors, with incompatibility or composition
-  issues
+- Ambiguity when using several preprocessors due to lacking clear composition semantics
 - Duplication of code and efforts on the different preprocessors
 - Performance loss with many phases (parsing, pretty-printing, etc.) being
   executed multiple times
+- Lack of cross-compiler compatibility
+- Incompatibility among the different preprocessor rather than one homogeneous preprocessor ecosystem
 
 {1 [ppxlib]}
 
@@ -31,11 +32,10 @@ toolchain, and the PPX authors provide an API for them. One could sum up the
 
 - It deals with all boilerplate, such as parsing the input, outputting the rewritten
   output, generating an executable, etc.
-- It generates a single executable for multiple transformations and deals with
-  possible composition issues
+- It generates a single executable for multiple transformations and defines clear composition semantics for local transformations
 - It integrates well with Dune and Merlin
 - It provides a more stable API than the compiler for manipulating the AST
-- A single PPX codebase works on every OCaml version of the AST
+- A single PPX codebase usually works on several OCaml versions of the AST
 - It defines restricted rewriters whose semantic ensure better confidence for the
   user and better compositional semantics
 - It provides many helpers to pattern-match and generate AST nodes, as well as traverse the

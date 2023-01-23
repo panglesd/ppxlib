@@ -64,9 +64,9 @@ case of the long {{!Ppxlib.Parsetree}[Parsetree]} type, it is a lot of boilerpla
 {1 Writing Traverses}
 
 For each kind of traversal described above, [ppxlib] provides "default" traversal,
-in the form of a class. For instance, in the case of the map traversal, the
+in the form of a class following the visitors pattern. For instance, in the case of the map traversal, the
 default map is the identity AST map, and any object of class {{!Ppxlib.Ast_traverse.map}[Ast_traverse.map]}
-will be this identity map. To apply a map to a node of a given type, one need
+will be this identity map. To apply a map to a node of a given type, one needs
 to call the appropriate method:
 
 {[

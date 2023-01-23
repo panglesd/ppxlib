@@ -388,7 +388,7 @@ children. Some helpers for this are provided in {{!Ppxlib.Merlin_helpers}[Merlin
 
 {1 Testing Your PPX}
 
-This section is not yet written. You can refer to {{:https://tarides.com/blog/2019-05-09-an-introduction-to-ocaml-ppx-ecosystem#testing-your-ppx}this blog post}, or contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
+This section is not yet written. You can refer to {{:https://tarides.com/blog/2019-05-09-an-introduction-to-ocaml-ppx-ecosystem#testing-your-ppx}this blog post} (notice that that blog post was written before `dune` introduced its cram test feature), or contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
 {1 Integrating With Merlin}
 

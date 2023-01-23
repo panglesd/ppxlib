@@ -37,7 +37,7 @@ however, it is less general because it only allows users to generate few differe
 structure items, expressions, patterns, etc., but it is not possible to generate a
 value of type {{!Ppxlib.Parsetree.row_field_desc}[row_field_desc]}!
 
-Note: The OCaml compiler API also provides a module, called {{!Ppxlib.Ast_helper}[Ast_helper]}, to
+Note: `Ppxlib` also re-exports the OCaml compiler API `Ast_helper` for historic reasons. It might get deprecated at some point, though. Please, use `Ast_builder` instead.
 manipulate the AST. This module is in [ppxlib] for compatiblity reasons and it is recommended to use {{!Ppxlib.Ast_builder}[Ast_builder]} instead.
 
 {1:ast_builder The [AST_builder] Module}
@@ -141,17 +141,16 @@ to correctly deal with locations. For this, {{!Ppxlib.Ast_builder}[Ast_builder]}
 several ways, depending on the context:
 
 {{!Ppxlib.Ast_builder.Default}[Ast_builder.Default]} contains functions which take the location as a named
-argument. It is useful if you want to control locations in a fine-grained way,
-or if the additional [~loc] variable is not verbosifying the code too much.
+argument. This is the strongly recommended workflow and lets you control locations in a fine-grained way.
 
-If you want to specify the location once and for all, and always use this
-specific one later in AST construction, you can use the {{!Ppxlib.Ast_builder.Make}[Ast_builder.Make]} functor
-or the {{!Ppxlib.Ast_builder.make}[Ast_builder.make]} function (outputing a first order module).
+If you have a concrete reason to specify the location once and for all, and always use this
+specific one later in AST constructions, you can use the {{!Ppxlib.Ast_builder.Make}[Ast_builder.Make]} functor
+or the {{!Ppxlib.Ast_builder.make}[Ast_builder.make]} function (outputing a first order module). Notice that this is quite a rare use case.
 
 {2 Compatibility}
 
 In order to stay as compatible as possible when a new option appears in the AST,
-{{!Ppxlib.Ast_builder}[Ast_builder]} always integrates the new option in a retro-compatible way. So, the
+{{!Ppxlib.Ast_builder}[Ast_builder]} always integrates the new option in a retro-compatible way (this is the case since the AST bump from 4.13 to 4.14). So, the
 signature of each function won't change, and {{!Ppxlib.Ast_builder}[Ast_builder]} will choose a
 retrocompatible way of generating an updated type’s AST node.
 
@@ -160,7 +159,7 @@ in OCaml and is not integrated in {{!Ppxlib.Ast_builder}[Ast_builder]}. For inst
 4.14 introduced the possibility to explicitly introduce type variables in a
 constructor declaration. This modified the AST type, and for
 backwards compatibility, {{!Ppxlib.Ast_builder}[Ast_builder]} did not modify the signature of the
-function. It is thus impossible to generate code using this new feature.
+function. It is thus impossible to generate code using this new feature via the `Ast_module` directly.
 
 In the case you need to access a new feature, you can use the [Latest] submodule
 (e.g., {{!Ppxlib.Ast_builder.Default.Latest}[Ast_builder.Default.Latest]} when specifying the locations). This module includes new functions, letting you

@@ -14,7 +14,7 @@ transformations. The driver will be called by the compiler.
 
 The PPX authors register their transformations using the
 {{!Ppxlib.Driver.register_transformation}[Driver.register_transformation]} function, as explained in the
-{{!"writing-ppxs"}Writing PPXs} section. The different argument of this function
+{{!"writing-ppxs"}Writing PPXs} section. The different arguments of this function
 corresponds to the {{!"derivers-and-extenders"}different kinds} of PPXs supported by
 [ppxlib] or the {{!driver_execution}phase}, at which time they will be executed.
 
@@ -23,7 +23,7 @@ The driver is created by calling either {{!Ppxlib.Driver.standalone}[Driver.stan
 these functions will need to be called by the PPX author. As we will see, Dune
 will be responsible for generating the driver after all required PPXs from
 different libraries have been registered. These functions will interpret the
-command lines arguments and start the rewriting accordingly.
+command line arguments and start the rewriting accordingly.
 
 The {{!Ppxlib.Driver.standalone}[Driver.standalone]} function creates an executable that
 parses an OCaml file, transforms it according to the registered transformations,
@@ -130,9 +130,9 @@ OCaml expression. The module to access cookies is {{!Ppxlib.Driver.Cookies}[Driv
 
 The {{:https://dune.build}Dune} build system is well integrated with the [ppxlib]
 mechanism of registering transformations. In every [dune] file, Dune will read
-the set of PPXs that are to be used. For a given set of rewriters, it will
+the set of PPXs that are to be used (i.e. the PPXs in `(preprocess (pps <list of PPXs that are to be used>))`). For a given set of rewriters, it will
 generate a driver using {{!Ppxlib.Driver.run_as_ppx_rewriter}[Driver.run_as_ppx_rewriter]} that contains all registered
-transformation. Using a single driver for multiple
+transformations. Using a single driver for multiple
 transformations from multiple PPXs ensures better composition semantics and
 improves the speed of the combined transformations.
 Moreover, [ppxlib] communicates with Dune through [.corrected] files to allow for
@@ -189,7 +189,7 @@ The two most important context-free transformations are {e derivers} and
 
 {2:def_derivers Derivers}
 
-A {e deriver} is a context-free transformation that, given a structure or
+A {e deriver} is a context-free transformation that, given a certain structure or
 signature item, will generate code {e to append after} this item. The given code is
 never modified. A deriver can be very useful to generate values depending on the
 structure of a user-defined type, for instance a converter for a type
@@ -198,7 +198,7 @@ to and from a JSON value. A deriver is triggered by adding an
 signature item. For instance, the folowing code:
 
 {@ocaml[
-  type t = Int of int | Float of float [@@deriving show]
+  type t = Int of int | Float of float [@@deriving yojson]
 
   let x = ...
 ]}
@@ -206,7 +206,7 @@ signature item. For instance, the folowing code:
 would be rewritten to:
 
 {@ocaml[
-  type ty = Int of int | Float of float [@@deriving show]
+  type ty = Int of int | Float of float [@@deriving yojson]
 
   let ty_of_yojson = ...
   let ty_to_yojson = ...
@@ -360,7 +360,7 @@ about the transformations, the order applied is alphabetical by the transformati
 {2 The Last Instrumentation Phase}
 
 This phase is for global transformation to escape the alphabetical order and be
-executed as a last phase. For instance, {{:https://github.com/aantron/bisect_ppx}[bissect_ppx]}
+executed as a last phase. For instance, {{:https://github.com/aantron/bisect_ppx}[bisect_ppx]}
 needs to be executed after all rewriting has occurred.
 
 Note that only one global transformation can be executed last. If several

@@ -13,15 +13,13 @@ that are listed in {!generatingcode}.
 For [ppxlib], a transformation is a description of a way to modify a given AST
 into another one. A transformation can be:
 
+- A context-free transformation, which only acts on a portion of the AST. In the [ppxlib] framework, those transformations
+  are represented by values of type {{!Ppxlib.Context_free.Rule.t}[Context_free.Rule.t]} and are executed in the {{!driver."context-free-phase"}context-free phase}. This is the strongly recommended kind of transformation due to its  {{!driver.advantages}important advantages}, such as good performance, well-defined composition semantics, and the safety and trustability that comes with well-isolated and strictly local modifications.
 - A global transformation, which takes the simple form of a function of type
   [structure -> structure] or [signature -> signature], that can sometimes take
   extra information as additional arguments. Such a transformation is applied in
   the {{!driver."global-transfo-phase"}global transformation phase}, unless it
-  has a good reason to have been registered in another phase.
-- A context-free transformation, which only acts on a portion of the AST. In the [ppxlib] framework, those transformations
-  are represented by values of type {{!Ppxlib.Context_free.Rule.t}[Context_free.Rule.t]} and are executed in the {{!driver."context-free-phase"}context-free phase}.
-
-Whenever possible, a context-free transformation should be preferred: global transformations have many {{!global_transformation}drawbacks}, while context-free ones have many {{!driver.advantages}advantages}.
+  has a good reason to have been registered in another phase. While global transformations are a flexible and powerful tool in the OCaml ecosystem, they come with many {{!global_transformation}drawbacks} and should only be used when really necessary.  
 
 In order to register a transformation to the [ppxlib] driver, one should use the
 {{!Ppxlib.Driver.V2.register_transformation}[Driver.V2.register_transformation]}. This function is used to register all
@@ -60,7 +58,7 @@ An {{!driver.def_extenders}extender} is characterised by several things:
   {ul
     {- The extension points' name on which it is triggered. For instance,
        an extender triggered on [[%name]] would not be triggered on [[%other_name]]}
-    {- The context on which it applies. Indeed, extension points can be used in
+    {- The AST context on which it applies. Indeed, extension points can be used in
        many different places: expression, pattern, core type, etc., and the extender
        should be restricted to one context, as it produces code of a single type. So,
        an extender triggered on expressions could be triggered on [let x = [%name]]
@@ -438,14 +436,16 @@ With such a rewriter registered:
 
 {1:global_transformation Global transformation}
 
-Global transformations are the most general kind of transformation. As such, they allow doing virtually any modifications, but this comes with several drawbacks:
+Global transformations are the most general kind of transformation. As such, they allow doing virtually any modifications, but this comes with several drawbacks. There are very few PPXs that really need this powerful but dangerous feature. In fact, even if, at first sight, it seems like your transformation isn't context-free, it's likely that you can find a more suitable abstraction with which it becomes context-free. Whenever that's the case, go for context-free! The mentioned drawbacks are:
 
 - It is harder for the user to know exactly what parts of the AST will be
-  changed.
+  changed. Your transformation becomes a scary black box. 
 - It is harder for [ppxlib] to combine several global transformations, as there is no
   guarantee that the effect of one will work well with the effect of another.
 - The job done by two global transformations (e.g., an AST traverse) cannot be
   factorised, resulting in slower compilation time.
+- If you don't make sure that you really follow all {{!"good-practices"}good practices}, you might end up messing up the global developer experience.
+
 For all these reasons, a global transformation should be avoided whenever a
 context-free transformation could do the job, which by experience seems to be most of the time.
 The API for defining a global transformation is easy. A global transformation consists simply of the function and can be directly be registered with {{!Ppxlib.Driver.register_transformation}[Driver.register_transformation]}.

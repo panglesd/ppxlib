@@ -254,7 +254,7 @@ such values are {{!Ppxlib.Ast_pattern.int}[Ast_pattern.int]}, {{!Ppxlib.Ast_patt
 {{!Ppxlib.Ast_builder}[Ast_builder]} has a constructor {{!Ppxlib.Ast_builder.Default.pstr_eval}[Ast_builder.pstr_eval]} to build a structure
 item from a [rec_flag] and a [value_binding] list. {{!Ppxlib.Ast_pattern}[Ast_pattern]} has an equally
 named {{!Ppxlib.Ast_pattern.pstr_eval}[Ast_pattern.pstr_eval]} which, given a way to destruct a [rec_flag] and a
-[value_binding] list, create a destructor for structure item.
+[value_binding] list, creates a destructor for structure item.
 
 {b The continuation modifiers}. Many {{!Ppxlib.Ast_pattern}[Ast_pattern]} values allow modifying the
 continuation. It can be it a map on the continuation itself, the argument to the
