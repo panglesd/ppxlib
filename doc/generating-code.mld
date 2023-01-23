@@ -201,6 +201,10 @@ First, in order to use [Metaquot], add it in your [preprocess] Dune stanza:
 
 Using Metaquot to generate code is simple: any [Metaquot] extension node in an
 expression context will be rewritten into the [Parsetree] value that lies in its payload.
+Notice that you'll need the [Ppxlib] opened, and a [loc] value of type
+{{!Ppxlib.Location.t}Location.t} in scope when using metaquot. That location
+will be attached to the [Parsetree] nodes your metaquot invokation produces.
+Getting the location right is extremely important for error messages.
 
 However, the {{!Ppxlib.Parsetree.payload}[Parsetree.payload]} of an extension node can only take few forms: a
 {{!Ppxlib.Parsetree.structure}[structure]}, a {{!Ppxlib.Parsetree.signature}[signature]}, a {{!Ppxlib.Parsetree.core_type}[core type]}, or a {{!Ppxlib.Parsetree.pattern}[pattern]}. We might want to generate
