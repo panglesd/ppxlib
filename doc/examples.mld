@@ -2,7 +2,13 @@
 
 {0 Examples}
 
+This section is here to allow viewing complete examples of PPXs written using [ppxlib] directly in the documentation. However, they are not "complete" in the sense that the overall organization, such as the [dune] files, is not included.
+
+In order to see a fully working complete example of a PPX written using [ppxlib], that you can compile, modify and test, go to the {{:https://github.com/ocaml-ppx/ppxlib/tree/main/examples}examples} folder of ppxlib sources.
+
 {1 [ppx_deriving_accesors]}
+
+The fully complete, ready-to-compile [ppx_deriving_accesors] example is accessible in [ppxlib]'s {{:https://github.com/ocaml-ppx/ppxlib/tree/main/examples/simple-deriver}sources}.
 
 This deriver will generate accessors for record fields, from the record type
 definition.
@@ -108,7 +114,9 @@ let my_deriver =
 
 {1 [ppx_get_env]}
 
- A PPX rewriter that will expand [[%get_env "SOME_ENV_VAR"]] into the value of the
+The fully complete, ready-to-compile [ppx_get_env] example is accessible in [ppxlib]'s {{:https://github.com/ocaml-ppx/ppxlib/tree/main/examples/simple-extension-rewriter}sources}.
+
+A PPX rewriter that will expand [[%get_env "SOME_ENV_VAR"]] into the value of the
 env variable [SOME_ENV_VAR] at compile time, as a string.
 
 E.g., assuming we set [MY_VAR="foo"], it will turn:
