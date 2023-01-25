@@ -2,8 +2,12 @@
 
 (** [ppxlib] is supposed to be opened globally in your PPX source files.
 
-    Opening it will bring several modules in scope, that are useful to have when
-    writing a rewriter:
+    Opening it comes with two advantages. First, it will shadow the
+    [compiler-libs] modules. The [compiler-libs] modules are unstable and aren't
+    meant to be used, so shadowing them is a good protection mechanism. In case
+    you don't want to open [Ppxlib], you can open [Ocaml_shadow] to get the same
+    protection. Second, it will bring several modules in scope, that are useful
+    to have when writing a rewriter:
 
     - The "core" [ppxlib] modules, such as modules to help manipulate the AST
       ({!Ast_builder}, {!Ast_pattern}), and a few functions.
