@@ -77,7 +77,6 @@ section is not yet written. You can find more information in these resources:
 {{:https://lists.ocaml.org/pipermail/wg-camlp4/2013-January/000000.html}1}
 {{:https://caml.inria.fr/pub/docs/manual-camlp4/manual002.html}2}
 {{:https://camlp5.github.io/}3}
-{{:https://discuss.ocaml.org/t/the-future-of-ppx/3766}4}
 {{:https://discuss.ocaml.org/t/an-update-on-the-state-of-the-ppx-ecosystem-and-ppxlib-s-transition/8200}5}.
 You can also contribute to the [ppxlib] documentation by opening a pull request in
 the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
