@@ -1,6 +1,6 @@
 (** Standard library for ppx rewriters *)
 
-(** [ppxlib] is supposed to be opened globally in your PPX source files.
+(** [ppxlib] is meant to be opened globally in your PPX source files.
 
     Opening it comes with two advantages. First, it will shadow the
     [compiler-libs] modules. The [compiler-libs] modules are unstable and aren't
@@ -9,7 +9,7 @@
     protection. Second, it will bring several modules in scope, that are useful
     to have when writing a rewriter:
 
-    - The "core" [ppxlib] modules, such as modules to help manipulate the AST
+    - The main [ppxlib] modules, such as modules to help manipulate the AST
       ({!Ast_builder}, {!Ast_pattern}), and a few functions.
     - Modules from other libraries, such as {!Ast_helper} or {!Pprintast},
     - The whole AST types (by [including] the {!Ast} module).
