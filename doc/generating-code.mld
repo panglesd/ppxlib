@@ -33,9 +33,9 @@ anti-quotations.
 
 Using {!Ppxlib_metaquot} requires less knowledge of the OCaml AST than
 {{!Ppxlib.Ast_builder}[Ast_builder]} as it only uses natural OCaml syntax;
-however, it is less general because it only allows users to generate few different nodes such as
+however, it's more restrictive than `Ast_builder` for two reasons: first, it's less flexible, since on its own it lacks the ability to generate nodes dynamically from other kind of data: e.g. it's not possible to build an expression containing a string, given the string as input. Second, it's less general because it only allows users to generate few different nodes such as
 structure items, expressions, patterns, etc., but it is not possible to generate a
-value of type {{!Ppxlib.Parsetree.row_field_desc}[row_field_desc]}!
+value of type {{!Ppxlib.Parsetree.row_field_desc}[row_field_desc]}! A typical workflow is to use `metaquot` for the constant skeleton of the node, and to use the `metaquot` anti-quotation workflow (see below) together with `Ast_builder` to fill in the dynamic parts.
 
 Note: `Ppxlib` also re-exports the OCaml compiler API `Ast_helper` for historic reasons. It might get deprecated at some point, though. Please, use `Ast_builder` instead.
 manipulate the AST. This module is in [ppxlib] for compatiblity reasons and it is recommended to use {{!Ppxlib.Ast_builder}[Ast_builder]} instead.
