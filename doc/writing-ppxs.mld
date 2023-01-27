@@ -122,7 +122,9 @@ produced node will have to match the {{!ext_context}type of extension node we re
   val extracter : unit -> (payload, string -> 'a, 'a) Ast_pattern.t = <fun>
 ]}
 
-The unit argument is not important.  It is added so that {{:https://v2.ocaml.org/manual/polymorphism.html#ss:valuerestriction}value restriction} does not add noise to the type variables. See the {{!"matching-code"}Destructing AST nodes} chapter and the {{!Ppxlib.Ast_pattern}[Ast_pattern] API} for more explanation on the types and functions used above.
+The above pattern extracts a string inside an extension node pattern. It will extract ["string"] in the the extension node [[%ext_name "string"]] and will refuse [[%ext_name 1+1]]. For other ready-to-use examples of patterns, refer to the {{!"matching-code".pattern_examples}example} section. For more in-depth explanation on the types and functions used above, see the {{!"matching-code"}Destructing AST nodes} chapter and the {{!Ppxlib.Ast_pattern}[Ast_pattern] API} .
+
+The unit argument in [extractor] is not important. It is added so that {{:https://v2.ocaml.org/manual/polymorphism.html#ss:valuerestriction}value restriction} does not add noise to the type variables. 
 
 {3 The Expand Function}
 
