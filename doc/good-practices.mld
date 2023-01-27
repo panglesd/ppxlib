@@ -394,16 +394,14 @@ With {!Ppxlib}'s current quoting mechanism, the code given in that example would
 
 This section is not yet written. You can refer to {{:https://tarides.com/blog/2019-05-09-an-introduction-to-ocaml-ppx-ecosystem#testing-your-ppx}this blog post} (notice that that blog post was written before `dune` introduced its cram test feature), or contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
-{1 Integrating With Merlin}
+{1 Migrate From Other Preprocessing Systems}
 
 This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
-{1 Migrate From OMP}
+{1 Other good practices}
 
-This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
+There are many good practices or other way to use [ppxlib] that are not mentioned in this manual. For instance, (in very short), you should always try to fully qualify variable names that are generated into the code via a PPX.
 
-{1 Migrate From [Ppx_traverse]}
-
-This section is not yet written. You can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
+if you want to add a section to this "good practices" manual, you can contribute to the [ppxlib] documentation by opening a pull request in the {{:https://github.com/ocaml-ppx/ppxlib/}repository}.
 
 {%html: <div style="display: flex; justify-content:space-between"><div>%}{{!"ast-traversal"}< Traversing the AST}{%html: </div><div>%}{{!"examples"}Examples >}{%html: </div></div>%}
