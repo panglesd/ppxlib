@@ -29,4 +29,6 @@ val mangle_lid : ?fixpoint:string -> affix -> Longident.t -> Longident.t
 (** [mangle_lid ~fixpoint affix lid] does the same as {!mangle}, but for the
     last component of [lid]. *)
 
+(** {2 Quoting} *)
+
 module Quoter = Quoter
