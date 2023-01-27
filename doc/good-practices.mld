@@ -2,6 +2,67 @@
 
 {0 Good Practices}
 
+
+{1:resp_loc Respecting Locations}
+
+Correctly dealing with location is essential to correctly generate OCaml code.
+They are necessary for error reporting by the compiler, but more generally for
+Merlin's features to work, such as displaying occurrences and jumping to
+definition. When called, the driver is called with the [-check] and
+[-check-locations] flags, [ppxlib] makes it is a requirement that locations follow
+some rules in order to accept the rewriting, as it will check that some
+invariants are respected.
+
+{2 The Invariants}
+
+The invariants are as follows:
+
+- AST nodes are requested to be well-nested WRT locations
+- the locations of "sibling" AST nodes should not overlap
+
+This is required for Merlin to behave properly.
+
+Indeed, for almost any query directed at Merlin, it will need to inspect the
+context around the user's cursor to give an answer that makes sense. And the
+only input it has to do that is the cursor’s position in the buffer.
+The handling of most queries starts by traversing the AST, using the
+locations of nodes to select the right branch. (1) is necessary to avoid
+discarding subtrees too early, (2) is used to avoid Merlin making arbitrary
+choices (if you ask for the type under the cursor, and there seems to be two
+things under the cursor, Merlin will need to pick one).
+
+{2 Guidelines for Writing Well-Behaved PPXs}
+
+It's obviously not always (indeed rarely) possible to mint new locations
+when manipulating the AST.
+
+The intended way to deal with locations is this:
+
+- AST nodes that exist in the source should keep their original location
+- new nodes should be given a "ghost" location (i.e.,
+  [{ some_loc with loc_ghost = true }]) to indicate that the node doesn't
+  exist in the sources.
+
+In particular, {{!Ppxlib.Location.none}[Location.none]} is never meant to be
+used by PPX authors, where some location is always available (for instance,
+derivers and extenders at least know the locations of their relevant node).
+
+Both the new check and Merlin will happily traverse the ghost nodes as if they
+didn't exist. Note: this comes into play when deciding which nodes are
+"siblings," for instance, if your AST is:
+
+{v
+  A (B1(C, D),
+     B2(X, Y))
+v}
+
+but [B2] has a ghost location, then [B1], [X] and [Y] are considered
+siblings.
+
+Additionally, there is an attribute [\[@merlin.hide\]] that you can add on
+nodes to tell Merlin (and the check) to ignore this node and all of its
+children. Some helpers for this are provided in {{!Ppxlib.Merlin_helpers}[Merlin_helpers]}.
+
 {1:handling_errors Handling Errors}
 
 
@@ -200,7 +261,6 @@ let rewrite_extension_point loc payload =
     Ast_builder.Default.pstr_extension ~loc ext []
 ]}
 
-
 {1:quoting Quoting}
 
 Quoting is part of producing
@@ -329,62 +389,6 @@ With {!Ppxlib}'s current quoting mechanism, the code given in that example would
   (((debug "debug" __0; __0) + 1), ((debug "y" __1; __1) + 2))
   - : unit = ()
 ]}
-
-{1:resp_loc Respecting Locations}
-
-Correctly dealing with location is essential to correctly generate OCaml code.
-They are necessary for error reporting by the compiler, but more generally for
-Merlin's features to work, such as displaying occurrences and jumping to
-definition. When called, the driver is called with the [-check] and
-[-check-locations] flags, [ppxlib] makes it is a requirement that locations follow
-some rules in order to accept the rewriting, as it will check that some
-invariants are respected.
-
-{2 The Invariants}
-
-The invariants are as follows:
-
-- AST nodes are requested to be well-nested WRT locations
-- the locations of "sibling" AST nodes should not overlap
-
-This is required for Merlin to behave properly.
-
-Indeed, for almost any query directed at Merlin, it will need to inspect the
-context around the user's cursor to give an answer that makes sense. And the
-only input it has to do that is the cursor’s position in the buffer.
-The handling of most queries starts by traversing the AST, using the
-locations of nodes to select the right branch. (1) is necessary to avoid
-discarding subtrees too early, (2) is used to avoid Merlin making arbitrary
-choices (if you ask for the type under the cursor, and there seems to be two
-things under the cursor, Merlin will need to pick one).
-
-{2 Guidelines for Writing Well-Behaved PPXs}
-
-It's obviously not always (indeed rarely) possible to mint new locations
-when manipulating the AST.
-
-The intended way to deal with locations is this:
-
-- AST nodes that exist in the source should keep their original location
-- new nodes should be given a "ghost" location (i.e.,
-  [{ some_loc with loc_ghost = true }]) to indicate that the node doesn't
-  exist in the sources.
-
-Both the new check and Merlin will happily traverse these ghost nodes as if
-they didn't exist. Note: this comes into play when deciding which nodes are
-"siblings," for instance, if your AST is:
-
-{v
-  A (B1(C, D),
-     B2(X, Y))
-v}
-
-but [B2] has a ghost location, then [B1], [X] and [Y] are considered
-siblings.
-
-Additionally, there is an attribute [\[@merlin.hide\]] that you can add on
-nodes to tell Merlin (and the check) to ignore this node and all of its
-children. Some helpers for this are provided in {{!Ppxlib.Merlin_helpers}[Merlin_helpers]}.
 
 {1 Testing Your PPX}
 
