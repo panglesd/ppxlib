@@ -196,7 +196,7 @@ with its payload. Since the payload was parsed by the OCaml parser to a
 First, in order to use [Metaquot], add it in your [preprocess] Dune stanza:
 
 {[
-  (prepocess (pps ppxlib.metaquot))
+  (preprocess (pps ppxlib.metaquot))
 ]}
 
 Using Metaquot to generate code is simple: any [Metaquot] extension node in an
